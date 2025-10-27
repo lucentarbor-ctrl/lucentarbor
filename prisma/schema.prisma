@@ -1,0 +1,362 @@
+// Prisma schema for AI Auto Blog - Complete Migration from FastAPI
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== CORE CONTENT MODELS ====================
+
+model Post {
+  id            Int       @id @default(autoincrement())
+  seriesId      Int?
+  title         String
+  content       String
+  category      String?
+  tags          String?   // JSON array
+  status        String    @default("draft") // draft, published, scheduled, archived
+  views         Int       @default(0)
+  shares        Int       @default(0)
+  likes         Int       @default(0)
+  comments      Int       @default(0)
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  publishedTime DateTime?
+
+  series            Series?            @relation(fields: [seriesId], references: [id], onDelete: SetNull)
+  versions          PostVersion[]
+  histories         PublishHistory[]
+  scheduledPosts    ScheduledPost[]
+  contentAnalyses   ContentAnalysis[]
+  performanceMetrics PerformanceMetric[]
+
+  @@map("posts")
+}
+
+model PostVersion {
+  id        Int      @id @default(autoincrement())
+  postId    Int
+  title     String
+  content   String
+  createdAt DateTime @default(now())
+
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@map("post_versions")
+}
+
+model Series {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  posts       Post[]
+
+  @@map("series")
+}
+
+model Idea {
+  id        Int      @id @default(autoincrement())
+  content   String
+  createdAt DateTime @default(now())
+
+  @@map("ideas")
+}
+
+// ==================== ANALYTICS & TRACKING ====================
+
+model Analytics {
+  id                   Int      @id @default(autoincrement())
+  date                 DateTime @unique
+  pageViews            Int      @default(0)
+  uniqueVisitors       Int      @default(0)
+  avgSessionDuration   Float    @default(0)
+  bounceRate           Float    @default(0)
+  createdAt            DateTime @default(now())
+
+  @@map("analytics")
+}
+
+model UserActivity {
+  id         Int      @id @default(autoincrement())
+  sessionId  String
+  pageUrl    String
+  timeSpent  Int      @default(0) // seconds
+  userAgent  String?
+  referrer   String?
+  createdAt  DateTime @default(now())
+
+  @@index([sessionId])
+  @@map("user_activities")
+}
+
+model TrendKeyword {
+  id              Int      @id @default(autoincrement())
+  keyword         String   @unique
+  popularityScore Int      @default(0)
+  category        String?
+  dateAdded       DateTime @default(now())
+  isActive        Boolean  @default(true)
+
+  @@map("trend_keywords")
+}
+
+model Insight {
+  id          Int      @id @default(autoincrement())
+  title       String
+  content     String
+  insightType String   // performance, audience, keyword, improvement
+  priority    String   @default("medium") // low, medium, high
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@map("insights")
+}
+
+// ==================== PERFORMANCE & QUALITY ====================
+
+model PerformanceMetric {
+  id          Int      @id @default(autoincrement())
+  postId      Int
+  platform    String
+  views       Int      @default(0)
+  likes       Int      @default(0)
+  comments    Int      @default(0)
+  shares      Int      @default(0)
+  avgReadTime Float    @default(0)
+  recordedAt  DateTime @default(now())
+  date        DateTime
+
+  post        Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@map("performance_metrics")
+}
+
+model ContentAnalysis {
+  id                   Int      @id @default(autoincrement())
+  postId               Int
+  readabilityScore     Float    @default(0)
+  avgSentenceLength    Float    @default(0)
+  avgWordLength        Float    @default(0)
+  keywordDensity       String?  // JSON object
+  topKeywords          String?  // JSON array
+  seoScore             Float    @default(0)
+  hasMetaDescription   Boolean  @default(false)
+  hasProperHeadings    Boolean  @default(false)
+  hasImages            Boolean  @default(false)
+  wordCount            Int      @default(0)
+  paragraphCount       Int      @default(0)
+  sentenceCount        Int      @default(0)
+  suggestions          String?  // JSON array
+  analyzedAt           DateTime @default(now())
+
+  post                 Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@map("content_analyses")
+}
+
+// ==================== AUTOMATION & SCHEDULING ====================
+
+model AutomationRule {
+  id              Int      @id @default(autoincrement())
+  name            String
+  description     String?
+  triggerType     String   // time, keyword, event
+  triggerConfig   String   // JSON object
+  actionType      String   // generate_post, publish_post, analyze_content
+  actionConfig    String   // JSON object
+  isActive        Boolean  @default(true)
+  lastRun         DateTime?
+  nextRun         DateTime?
+  totalRuns       Int      @default(0)
+  successfulRuns  Int      @default(0)
+  failedRuns      Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  logs            AutomationLog[]
+
+  @@map("automation_rules")
+}
+
+model AutomationLog {
+  id              Int      @id @default(autoincrement())
+  ruleId          Int
+  status          String   // success, failed, running
+  startedAt       DateTime @default(now())
+  completedAt     DateTime?
+  resultData      String?  // JSON object
+  errorMessage    String?
+  generatedPostId Int?
+
+  rule            AutomationRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@map("automation_logs")
+}
+
+// ==================== MEDIA & CONTENT ====================
+
+model MediaFile {
+  id              Int      @id @default(autoincrement())
+  filename        String
+  storedFilename  String   @unique
+  filePath        String
+  fileUrl         String
+  fileType        String   // image, video, document
+  mimeType        String
+  fileSize        Int
+  width           Int?
+  height          Int?
+  isAiGenerated   Boolean  @default(false)
+  aiPrompt        String?
+  aiModel         String?
+  title           String?
+  altText         String?
+  description     String?
+  tags            String?  // JSON array
+  usageCount      Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("media_files")
+}
+
+// ==================== PLATFORM INTEGRATION ====================
+
+model PlatformConfig {
+  id             Int      @id @default(autoincrement())
+  platformName   String   @unique
+  displayName    String
+  isEnabled      Boolean  @default(true)
+  config         String   // JSON object for flexible platform-specific settings
+  totalPosts     Int      @default(0)
+  successfulPosts Int     @default(0)
+  failedPosts    Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("platform_configs")
+}
+
+model Blog {
+  id           Int      @id @default(autoincrement())
+  name         String
+  platform     String   // wordpress, tistory, medium, brunch
+  url          String?
+  description  String?
+  apiUrl       String?
+  apiKey       String?
+  username     String?
+  isActive     Boolean  @default(true)
+  totalPosts   Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  categories       Category[]
+  scheduledPosts   ScheduledPost[]
+  publishHistories PublishHistory[]
+
+  @@map("blogs")
+}
+
+model Category {
+  id          Int      @id @default(autoincrement())
+  blogId      Int
+  name        String
+  parentId    Int?     // for hierarchical categories
+  description String?
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  blog           Blog            @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  scheduledPosts ScheduledPost[]
+
+  @@map("categories")
+}
+
+model ScheduledPost {
+  id            Int      @id @default(autoincrement())
+  postId        Int
+  blogId        Int
+  categoryId    Int?
+  scheduledTime DateTime
+  status        String   @default("pending") // pending, published, failed, cancelled
+  publishedUrl  String?
+  errorMessage  String?
+  publishedAt   DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  post     Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  blog     Blog      @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@map("scheduled_posts")
+}
+
+// ==================== CONFIGURATION ====================
+
+model Setting {
+  id          Int      @id @default(autoincrement())
+  key         String   @unique
+  value       String
+  category    String?
+  description String?
+  isSecret    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("settings")
+}
+
+// ==================== AI MODELS ====================
+
+model AIModel {
+  id           Int      @id @default(autoincrement())
+  modelName    String   @unique
+  displayName  String
+  provider     String   // google, openai, anthropic, ollama
+  modelType    String   // text, image, multimodal
+  isEnabled    Boolean  @default(true)
+  isDefault    Boolean  @default(false)
+  apiKeyEnv    String?  // environment variable name for API key
+  config       String?  // JSON object for model-specific config
+  totalRequests Int     @default(0)
+  totalTokens  Int      @default(0)
+  totalCost    Float    @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("ai_models")
+}
+
+// ==================== PUBLISHING & HISTORY ====================
+
+model PublishHistory {
+  id               Int      @id @default(autoincrement())
+  postId           Int
+  blogId           Int
+  platform         String
+  platformPostId   String?
+  platformUrl      String?
+  status           String   // success, failed
+  errorMessage     String?
+  publishedAt      DateTime @default(now())
+  viewsSnapshot    Int      @default(0)
+  likesSnapshot    Int      @default(0)
+  commentsSnapshot Int      @default(0)
+  sharesSnapshot   Int      @default(0)
+
+  post             Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  blog             Blog     @relation(fields: [blogId], references: [id], onDelete: Cascade)
+
+  @@map("publish_histories")
+}
