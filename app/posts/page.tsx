@@ -49,8 +49,6 @@ interface CurrentFilter {
   categoryId?: number;
 }
 
-const API_BASE_URL = 'http://localhost:5001/api';
-
 export default function PostsPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [blogs, setBlogs] = useState<Blog[]>([]);
@@ -71,13 +69,13 @@ export default function PostsPage() {
   // Load blogs from API
   const loadBlogs = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/blogs`);
+      const response = await fetch('/api/blogs');
       if (!response.ok) throw new Error('Failed to load blogs');
       const blogsData = await response.json();
 
       // Load categories for each blog
       for (let blog of blogsData) {
-        const categoriesResponse = await fetch(`${API_BASE_URL}/categories?blog_id=${blog.id}`);
+        const categoriesResponse = await fetch(`/api/categories?blog_id=${blog.id}`);
         if (categoriesResponse.ok) {
           blog.categories = await categoriesResponse.json();
         } else {
@@ -107,7 +105,7 @@ export default function PostsPage() {
 
     // Load from backend API
     try {
-      const response = await fetch(`${API_BASE_URL}/posts`);
+      const response = await fetch('/api/posts');
       const result = await response.json();
 
       if (Array.isArray(result)) {
@@ -153,7 +151,7 @@ export default function PostsPage() {
         };
 
         try {
-          const response = await fetch(`${API_BASE_URL}/blogs`, {
+          const response = await fetch('/api/blogs', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(defaultBlog)
@@ -169,7 +167,7 @@ export default function PostsPage() {
             ];
 
             for (let cat of defaultCategories) {
-              await fetch(`${API_BASE_URL}/categories`, {
+              await fetch('/api/categories', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(cat)
@@ -245,7 +243,7 @@ export default function PostsPage() {
     try {
       if (String(postId).startsWith('backend-')) {
         const realId = String(postId).replace('backend-', '');
-        const response = await fetch(`${API_BASE_URL}/posts/${realId}`, {
+        const response = await fetch(`/api/posts/${realId}`, {
           method: 'DELETE'
         });
 

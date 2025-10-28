@@ -37,7 +37,7 @@ export default function MediaRealPage() {
 
   async function loadMedia() {
     try {
-      const response = await fetch('http://localhost:5001/api/media/list');
+      const response = await fetch('/api/media/list');
       const result = await response.json();
 
       if (result.status === 'success' && result.data.files.length > 0) {
@@ -59,7 +59,7 @@ export default function MediaRealPage() {
     }
 
     try {
-      const response = await fetch(`http://localhost:5001/api/media/${mediaId}`, {
+      const response = await fetch(`/api/media/${mediaId}`, {
         method: 'DELETE'
       });
 
@@ -110,7 +110,7 @@ export default function MediaRealPage() {
 
     for (const mediaId of selectedMediaIds) {
       try {
-        const response = await fetch(`http://localhost:5001/api/media/${mediaId}`, {
+        const response = await fetch(`/api/media/${mediaId}`, {
           method: 'DELETE'
         });
 
@@ -150,7 +150,7 @@ export default function MediaRealPage() {
 
     for (const file of mediaFiles) {
       try {
-        const response = await fetch(`http://localhost:5001/api/media/${file.id}`, {
+        const response = await fetch(`/api/media/${file.id}`, {
           method: 'DELETE'
         });
 
@@ -176,7 +176,7 @@ export default function MediaRealPage() {
   }
 
   function selectMedia(file: MediaFile) {
-    const url = `http://localhost:5001${file.url}`;
+    const url = file.url;
     const markdown = `![${file.alt_text || file.filename}](${url})`;
 
     if (navigator.clipboard) {
@@ -203,7 +203,7 @@ export default function MediaRealPage() {
     try {
       setUploading(true);
 
-      const response = await fetch('http://localhost:5001/api/media/upload', {
+      const response = await fetch('/api/media/upload', {
         method: 'POST',
         body: formData
       });
@@ -235,7 +235,7 @@ export default function MediaRealPage() {
     try {
       setGenerating(true);
 
-      const response = await fetch('http://localhost:5001/api/ai/generate-image', {
+      const response = await fetch('/api/ai/generate-image', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -266,7 +266,7 @@ export default function MediaRealPage() {
           formData.append('ai_prompt', aiPrompt);
           formData.append('ai_model', aiModel);
 
-          const uploadResponse = await fetch('http://localhost:5001/api/media/upload', {
+          const uploadResponse = await fetch('/api/media/upload', {
             method: 'POST',
             body: formData
           });
@@ -373,7 +373,7 @@ export default function MediaRealPage() {
                       onClick={(e) => e.stopPropagation()}
                     />
                     <div className="media-preview" onClick={() => selectMedia(file)}>
-                      <img src={url} alt={file.filename} />
+                      <img src={file.url} alt={file.filename} />
                     </div>
                     <div className="media-info">
                       <div className="media-filename">{file.filename}</div>

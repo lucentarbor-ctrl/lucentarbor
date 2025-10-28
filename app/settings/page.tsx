@@ -54,8 +54,6 @@ export default function SettingsRealPage() {
     password: ''
   });
 
-  const API_BASE_URL = 'http://localhost:5001';
-
   // Load theme on mount
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' || 'light';
@@ -83,7 +81,7 @@ export default function SettingsRealPage() {
 
   const loadAPIKeys = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/settings?category=ai_api`);
+      const response = await fetch('/api/settings?category=ai_api');
       const settings = await response.json();
       setApiKeys(settings);
     } catch (error) {
@@ -93,7 +91,7 @@ export default function SettingsRealPage() {
 
   const loadPlatforms = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/platforms`);
+      const response = await fetch('/api/platforms');
       const result = await response.json();
       if (result.data && result.data.length === 0) {
         await createDefaultPlatforms();
@@ -116,7 +114,7 @@ export default function SettingsRealPage() {
 
     for (const platform of defaultPlatforms) {
       try {
-        await fetch(`${API_BASE_URL}/api/platforms`, {
+        await fetch('/api/platforms', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -133,7 +131,7 @@ export default function SettingsRealPage() {
 
   const loadImageAPIs = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/settings?category=image_api`);
+      const response = await fetch('/api/settings?category=image_api');
       const settings = await response.json();
       setImageAPIs(settings);
     } catch (error) {
@@ -143,7 +141,7 @@ export default function SettingsRealPage() {
 
   const loadAIModels = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/settings?category=ai_models`);
+      const response = await fetch('/api/settings?category=ai_models');
       const settings = await response.json();
 
       let models = [];
@@ -173,7 +171,7 @@ export default function SettingsRealPage() {
 
   const loadWordPressBlogs = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/blogs`);
+      const response = await fetch('/api/blogs');
       const blogs = await response.json();
       setWordpressBlogs(blogs.filter((b: any) => b.platform === 'wordpress'));
     } catch (error) {
@@ -200,7 +198,7 @@ export default function SettingsRealPage() {
         description: endpoint || ''
       });
 
-      const response = await fetch(`${API_BASE_URL}/api/settings/upsert?${params.toString()}`, {
+      const response = await fetch(`/api/settings/upsert?${params.toString()}`, {
         method: 'POST'
       });
 
@@ -223,7 +221,7 @@ export default function SettingsRealPage() {
     if (!confirm(`${apiKey}를 삭제하시겠습니까?`)) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/settings/${apiKey}`, {
+      const response = await fetch(`/api/settings/${apiKey}`, {
         method: 'DELETE'
       });
 
@@ -241,7 +239,7 @@ export default function SettingsRealPage() {
 
   const editAPIKey = async (apiKey: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/settings/${apiKey}`);
+      const response = await fetch(`/api/settings/${apiKey}`);
       const setting = await response.json();
       const service = apiKey.replace('_API_KEY', '').toLowerCase();
 
@@ -273,7 +271,7 @@ export default function SettingsRealPage() {
         is_secret: 'true'
       });
 
-      const response = await fetch(`${API_BASE_URL}/api/settings/upsert?${params.toString()}`, {
+      const response = await fetch(`/api/settings/upsert?${params.toString()}`, {
         method: 'POST'
       });
 
@@ -319,7 +317,7 @@ export default function SettingsRealPage() {
         description: 'AI 모델 목록'
       });
 
-      const modelResponse = await fetch(`${API_BASE_URL}/api/settings/upsert?${modelParams.toString()}`, {
+      const modelResponse = await fetch(`/api/settings/upsert?${modelParams.toString()}`, {
         method: 'POST'
       });
 
@@ -334,7 +332,7 @@ export default function SettingsRealPage() {
           description: `${name} API Key`
         });
 
-        await fetch(`${API_BASE_URL}/api/settings/upsert?${apiParams.toString()}`, {
+        await fetch(`/api/settings/upsert?${apiParams.toString()}`, {
           method: 'POST'
         });
       }
@@ -377,7 +375,7 @@ export default function SettingsRealPage() {
         description: 'AI 모델 목록'
       });
 
-      const response = await fetch(`${API_BASE_URL}/api/settings/upsert?${params.toString()}`, {
+      const response = await fetch(`/api/settings/upsert?${params.toString()}`, {
         method: 'POST'
       });
 
@@ -403,7 +401,7 @@ export default function SettingsRealPage() {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/blogs`, {
+      const response = await fetch('/api/blogs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -432,10 +430,10 @@ export default function SettingsRealPage() {
 
   const testWordPressConnection = async (blogId: number) => {
     try {
-      const blogResponse = await fetch(`${API_BASE_URL}/api/blogs/${blogId}`);
+      const blogResponse = await fetch(`/api/blogs/${blogId}`);
       const blog = await blogResponse.json();
 
-      const response = await fetch(`${API_BASE_URL}/api/wordpress/test-connection`, {
+      const response = await fetch('/api/wordpress/test-connection', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1689,7 +1687,7 @@ export default function SettingsRealPage() {
                       checked={platform.is_enabled}
                       onChange={async (e) => {
                         try {
-                          const response = await fetch(`${API_BASE_URL}/api/platforms/${platform.id}`, {
+                          const response = await fetch(`/api/platforms/${platform.id}`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ is_enabled: e.target.checked })
@@ -1745,7 +1743,7 @@ export default function SettingsRealPage() {
           <form onSubmit={async (e) => {
             e.preventDefault();
             try {
-              const response = await fetch(`${API_BASE_URL}/api/platforms/${platformForm.id}`, {
+              const response = await fetch(`/api/platforms/${platformForm.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

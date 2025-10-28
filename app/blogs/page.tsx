@@ -4,8 +4,6 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import AppLayout from '@/components/AppLayout';
 
-const API_BASE_URL = 'http://localhost:5001';
-
 interface Blog {
   id: number;
   name: string;
@@ -68,7 +66,7 @@ export default function WordPressPage() {
   // Load WordPress blogs
   async function loadWordPressBlogs() {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/blogs`);
+      const response = await fetch('/api/blogs');
       const blogs = await response.json();
       const wpBlogs = blogs.filter((b: Blog) => b.platform === 'wordpress' && b.is_active);
       setAllBlogs(wpBlogs);
@@ -80,7 +78,7 @@ export default function WordPressPage() {
   // Load posts
   async function loadPosts() {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/posts`);
+      const response = await fetch('/api/posts');
       const posts = await response.json();
       setAllPosts(posts);
     } catch (error) {
@@ -108,10 +106,10 @@ export default function WordPressPage() {
   // Test connection
   async function testConnection(blogId: number) {
     try {
-      const blogResponse = await fetch(`${API_BASE_URL}/api/blogs/${blogId}`);
+      const blogResponse = await fetch(`/api/blogs/${blogId}`);
       const blog = await blogResponse.json();
 
-      const response = await fetch(`${API_BASE_URL}/api/wordpress/test-connection`, {
+      const response = await fetch('/api/wordpress/test-connection', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -135,7 +133,7 @@ export default function WordPressPage() {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/wordpress/sync-categories`, {
+      const response = await fetch('/api/wordpress/sync-categories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ blog_id: blogId })
@@ -168,7 +166,7 @@ export default function WordPressPage() {
     if (!selectedPostId) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/wordpress/publish`, {
+      const response = await fetch('/api/wordpress/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

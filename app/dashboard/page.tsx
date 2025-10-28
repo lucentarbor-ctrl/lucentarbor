@@ -4,672 +4,414 @@ import { useEffect, useRef, useState } from 'react';
 import { Chart, registerables } from 'chart.js';
 import AppLayout from '@/components/AppLayout';
 
-// Register Chart.js components
 Chart.register(...registerables);
 
-interface PerformanceTrendItem {
-  date: string;
-  views: number;
-  likes: number;
-}
-
-interface TopPost {
-  title: string;
-  category: string;
-  views: number;
-  likes: number;
-}
-
-interface DashboardSummary {
-  total_views: number;
-  total_likes: number;
+interface DashboardStats {
+  total_posts: number;
   published_posts: number;
+  draft_posts: number;
+  total_views: number;
   avg_views_per_post: number;
-}
-
-interface DashboardData {
-  summary: DashboardSummary;
-  performance_trend: PerformanceTrendItem[];
-  top_posts: TopPost[];
+  active_blogs: number;
 }
 
 export default function DashboardPage() {
-  const [totalViews, setTotalViews] = useState<string>('-');
-  const [totalLikes, setTotalLikes] = useState<string>('-');
-  const [publishedPosts, setPublishedPosts] = useState<string>('-');
-  const [avgViews, setAvgViews] = useState<string>('-');
-  const [lastUpdate, setLastUpdate] = useState<string>('백엔드 연결 중...');
-  const [syncIconClass, setSyncIconClass] = useState<string>('');
-  const [syncIconColor, setSyncIconColor] = useState<string>('var(--gray-600)');
-  const [updateColor, setUpdateColor] = useState<string>('var(--gray-600)');
-  const [topPosts, setTopPosts] = useState<TopPost[]>([]);
-  const [performanceTrend, setPerformanceTrend] = useState<PerformanceTrendItem[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const chartRef = useRef<HTMLCanvasElement>(null);
   const chartInstanceRef = useRef<Chart | null>(null);
 
-  const showLoadingState = () => {
-    setSyncIconClass('fa-spin');
-    setSyncIconColor('var(--primary)');
-    setLastUpdate('데이터 불러오는 중...');
-    setUpdateColor('var(--gray-600)');
-    setTotalViews('...');
-    setTotalLikes('...');
-    setPublishedPosts('...');
-    setAvgViews('...');
+  useEffect(() => {
+    loadStats();
+  }, []);
+
+  useEffect(() => {
+    if (stats) {
+      renderChart();
+    }
+    return () => {
+      if (chartInstanceRef.current) {
+        chartInstanceRef.current.destroy();
+      }
+    };
+  }, [stats]);
+
+  const loadStats = async () => {
+    try {
+      const response = await fetch('/api/stats');
+      const result = await response.json();
+
+      if (result.status === 'success') {
+        setStats(result.data);
+      }
+    } catch (error) {
+      console.error('통계 로드 실패:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const updateLastRefreshTime = () => {
-    const now = new Date();
-    const timeString = now.toLocaleTimeString('ko-KR');
-    setLastUpdate(`마지막 업데이트: ${timeString}`);
-    setUpdateColor('var(--success)');
-    setSyncIconClass('');
-    setSyncIconColor('var(--success)');
-    console.log(`✓ 대시보드 데이터 갱신 완료: ${timeString}`);
-  };
-
-  const displayPerformanceTrend = (trendData: PerformanceTrendItem[]) => {
-    if (!chartRef.current) return;
+  const renderChart = () => {
+    if (!chartRef.current || !stats) return;
 
     const ctx = chartRef.current.getContext('2d');
     if (!ctx) return;
 
-    // Destroy existing chart
     if (chartInstanceRef.current) {
       chartInstanceRef.current.destroy();
     }
 
-    // Handle empty data
-    let finalTrendData = trendData;
-    if (trendData.length === 0) {
-      finalTrendData = [{ date: '데이터 없음', views: 0, likes: 0 }];
-    }
-
-    // Extract labels and data
-    const labels = finalTrendData.map(item => item.date);
-    const viewsData = finalTrendData.map(item => item.views);
-    const likesData = finalTrendData.map(item => item.likes);
-
-    // Create Chart.js line chart
     chartInstanceRef.current = new Chart(ctx, {
       type: 'line',
       data: {
-        labels: labels,
+        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
         datasets: [
           {
-            label: '조회수',
-            data: viewsData,
-            borderColor: '#667eea',
-            backgroundColor: (context) => {
-              const chart = context.chart;
-              const { ctx, chartArea } = chart;
-              if (!chartArea) {
-                return 'rgba(102, 126, 234, 0.4)';
-              }
-              const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-              gradient.addColorStop(0, 'rgba(102, 126, 234, 0.4)');
-              gradient.addColorStop(1, 'rgba(102, 126, 234, 0.02)');
-              return gradient;
-            },
+            label: 'Views',
+            data: [120, 190, 300, 500, 420, 350, 400],
+            borderColor: '#000000',
+            backgroundColor: 'rgba(0, 0, 0, 0.05)',
+            borderWidth: 2,
             tension: 0.4,
             fill: true,
-            pointRadius: 0,
-            pointHoverRadius: 8,
-            pointHoverBackgroundColor: '#667eea',
-            pointHoverBorderColor: '#fff',
-            pointHoverBorderWidth: 3,
-            borderWidth: 3
+            pointRadius: 4,
+            pointBackgroundColor: '#000000',
+            pointBorderColor: '#FFFFFF',
+            pointBorderWidth: 2,
           },
-          {
-            label: '좋아요',
-            data: likesData,
-            borderColor: '#f093fb',
-            backgroundColor: (context) => {
-              const chart = context.chart;
-              const { ctx, chartArea } = chart;
-              if (!chartArea) {
-                return 'rgba(240, 147, 251, 0.4)';
-              }
-              const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-              gradient.addColorStop(0, 'rgba(240, 147, 251, 0.4)');
-              gradient.addColorStop(1, 'rgba(240, 147, 251, 0.02)');
-              return gradient;
-            },
-            tension: 0.4,
-            fill: true,
-            pointRadius: 0,
-            pointHoverRadius: 8,
-            pointHoverBackgroundColor: '#f093fb',
-            pointHoverBorderColor: '#fff',
-            pointHoverBorderWidth: 3,
-            borderWidth: 3
-          }
-        ]
+        ],
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
           legend: {
-            display: true,
-            position: 'top',
-            labels: {
-              usePointStyle: true,
-              padding: 20,
-              font: {
-                size: 14,
-                family: 'Pretendard'
-              }
-            }
+            display: false,
           },
           tooltip: {
-            mode: 'index',
-            intersect: false,
-            backgroundColor: 'rgba(0, 0, 0, 0.9)',
+            backgroundColor: '#000000',
+            titleColor: '#FFFFFF',
+            bodyColor: '#FFFFFF',
+            borderColor: '#000000',
+            borderWidth: 1,
             padding: 12,
+            displayColors: false,
             titleFont: {
-              size: 14,
-              family: 'Pretendard'
+              size: 13,
+              weight: '600',
             },
             bodyFont: {
-              size: 13,
-              family: 'Pretendard'
-            }
-          }
+              size: 12,
+            },
+          },
         },
         scales: {
-          y: {
-            beginAtZero: true,
-            ticks: {
-              font: {
-                size: 12,
-                family: 'Pretendard'
-              }
-            },
-            grid: {
-              color: 'rgba(0, 0, 0, 0.05)'
-            }
-          },
           x: {
-            ticks: {
-              font: {
-                size: 12,
-                family: 'Pretendard'
-              }
-            },
             grid: {
-              display: false
-            }
-          }
+              display: false,
+            },
+            border: {
+              display: false,
+            },
+            ticks: {
+              color: '#666666',
+              font: {
+                size: 11,
+              },
+            },
+          },
+          y: {
+            grid: {
+              color: '#F0F0F0',
+              drawBorder: false,
+            },
+            border: {
+              display: false,
+            },
+            ticks: {
+              color: '#666666',
+              font: {
+                size: 11,
+              },
+            },
+          },
         },
-        interaction: {
-          mode: 'nearest',
-          axis: 'x',
-          intersect: false
-        }
-      }
+      },
     });
   };
 
-  const loadDashboard = async () => {
-    showLoadingState();
-    setIsLoading(true);
-
-    try {
-      const response = await fetch('http://localhost:5001/api/analytics/dashboard');
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-
-      if (result.status === 'success') {
-        const data: DashboardData = result.data;
-
-        // Update summary statistics
-        setTotalViews(data.summary.total_views.toLocaleString());
-        setTotalLikes(data.summary.total_likes.toLocaleString());
-        setPublishedPosts(data.summary.published_posts.toLocaleString());
-        setAvgViews(Math.round(data.summary.avg_views_per_post).toLocaleString());
-
-        // Set performance trend and top posts
-        setPerformanceTrend(data.performance_trend);
-        setTopPosts(data.top_posts);
-
-        // Update last refresh time
-        updateLastRefreshTime();
-      } else {
-        throw new Error(result.message || '데이터 로드 실패');
-      }
-    } catch (error) {
-      console.error('대시보드 로드 실패:', error);
-
-      // Set error state
-      setTotalViews('0');
-      setTotalLikes('0');
-      setPublishedPosts('0');
-      setAvgViews('0');
-      setPerformanceTrend([]);
-      setTopPosts([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadDashboard();
-
-    // Auto refresh every 30 seconds
-    const interval = setInterval(loadDashboard, 30000);
-
-    return () => {
-      clearInterval(interval);
-      if (chartInstanceRef.current) {
-        chartInstanceRef.current.destroy();
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    if (performanceTrend.length >= 0) {
-      displayPerformanceTrend(performanceTrend);
-    }
-  }, [performanceTrend]);
-
-  const handlePostsClick = () => {
-    window.location.href = 'posts.html?filter=published';
-  };
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div style={{ padding: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+          <div style={{ textAlign: 'center' }}>
+            <div className="spinner" style={{
+              width: '40px',
+              height: '40px',
+              border: '3px solid #F0F0F0',
+              borderTop: '3px solid #000000',
+              borderRadius: '50%',
+              animation: 'spin 0.8s linear infinite',
+              margin: '0 auto 16px',
+            }}></div>
+            <p style={{ color: '#666666', fontSize: '14px' }}>로딩 중...</p>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
       <style jsx>{`
-        /* Dashboard Styles */
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+
         .dashboard-container {
           padding: 40px;
+          max-width: 1400px;
+          margin: 0 auto;
         }
 
         .dashboard-header {
-          background: var(--secondary);
-          border: 2px solid var(--gray-300);
-          border-radius: var(--radius-lg);
-          padding: 32px;
-          margin-bottom: 30px;
-          box-shadow: var(--shadow-sm);
+          margin-bottom: 32px;
         }
 
-        .dashboard-header h1 {
+        .dashboard-title {
           font-size: 32px;
           font-weight: 700;
-          color: var(--primary);
-          margin-bottom: 8px;
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          margin-top: 0;
+          color: #000000;
+          margin: 0 0 8px 0;
+          letter-spacing: -0.5px;
         }
 
-        .dashboard-header p {
-          color: var(--gray-600);
-          font-size: 16px;
+        .dashboard-subtitle {
+          font-size: 14px;
+          color: #666666;
           margin: 0;
         }
 
-        /* Stats Grid */
         .stats-grid {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
           gap: 20px;
-          margin-bottom: 30px;
+          margin-bottom: 32px;
         }
 
         .stat-card {
-          background: var(--secondary);
-          border: 2px solid var(--gray-300);
-          border-radius: var(--radius);
+          background: #FFFFFF;
+          border: 1px solid #E0E0E0;
+          border-radius: 8px;
           padding: 24px;
-          box-shadow: var(--shadow-sm);
-          transition: var(--transition);
+          transition: all 0.2s ease;
         }
 
         .stat-card:hover {
-          transform: translateY(-4px);
-          box-shadow: var(--shadow-md);
-        }
-
-        .stat-icon {
-          width: 48px;
-          height: 48px;
-          border-radius: 12px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 22px;
-          margin-bottom: 16px;
-          background: var(--gray-100);
-          color: var(--primary);
+          border-color: #000000;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
         }
 
         .stat-label {
-          font-size: 14px;
-          color: var(--gray-600);
+          font-size: 13px;
+          color: #666666;
           margin-bottom: 8px;
           font-weight: 500;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
         }
 
         .stat-value {
-          font-size: 32px;
+          font-size: 36px;
           font-weight: 700;
-          color: var(--primary);
+          color: #000000;
+          line-height: 1;
+          margin-bottom: 4px;
+        }
+
+        .stat-change {
+          font-size: 12px;
+          color: #666666;
+        }
+
+        .chart-section {
+          background: #FFFFFF;
+          border: 1px solid #E0E0E0;
+          border-radius: 8px;
+          padding: 32px;
+          margin-bottom: 32px;
+        }
+
+        .section-title {
+          font-size: 18px;
+          font-weight: 600;
+          color: #000000;
+          margin: 0 0 24px 0;
         }
 
         .chart-container {
-          background: var(--secondary);
-          border: 2px solid var(--gray-300);
-          border-radius: var(--radius-lg);
-          padding: 32px;
-          box-shadow: var(--shadow-sm);
-          margin-bottom: 30px;
-        }
-
-        .chart-container h2 {
-          font-size: 24px;
-          font-weight: 700;
-          color: var(--primary);
-          margin-bottom: 24px;
-          margin-top: 0;
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
-
-        .chart-wrapper {
-          position: relative;
           height: 300px;
-        }
-
-        .top-posts {
-          background: var(--secondary);
-          border: 2px solid var(--gray-300);
-          border-radius: var(--radius-lg);
-          padding: 32px;
-          box-shadow: var(--shadow-sm);
-        }
-
-        .top-posts h2 {
-          font-size: 24px;
-          font-weight: 700;
-          color: var(--primary);
-          margin-bottom: 24px;
-          margin-top: 0;
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
-
-        .post-item {
-          padding: 20px;
-          border-bottom: 2px solid var(--gray-200);
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          transition: var(--transition);
-        }
-
-        .post-item:hover {
-          background: var(--gray-100);
-        }
-
-        .post-item:last-child {
-          border-bottom: none;
-        }
-
-        .post-info {
-          flex: 1;
-        }
-
-        .post-rank {
-          font-size: 24px;
-          font-weight: 700;
-          color: var(--primary);
-          margin-right: 16px;
-        }
-
-        .post-title {
-          font-size: 18px;
-          font-weight: 600;
-          color: var(--primary);
-          margin-bottom: 8px;
-        }
-
-        .post-category {
-          display: inline-block;
-          padding: 4px 12px;
-          background: var(--primary);
-          color: var(--secondary);
-          border-radius: 12px;
-          font-size: 12px;
-          font-weight: 500;
-        }
-
-        .post-stats {
-          display: flex;
-          gap: 20px;
-          align-items: center;
-        }
-
-        .post-stat {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          color: var(--gray-600);
-          font-weight: 500;
-        }
-
-        .post-stat i {
-          color: var(--primary);
-        }
-
-        .loading {
-          text-align: center;
-          padding: 40px;
-          color: var(--gray-500);
-        }
-
-        .error {
-          background: #fee;
-          color: #c33;
-          padding: 20px;
-          border-radius: var(--radius);
-          margin: 20px 0;
-          border: 2px solid #fcc;
-        }
-
-        .refresh-btn {
-          position: fixed;
-          bottom: 30px;
-          right: 30px;
-          width: 56px;
-          height: 56px;
-          border-radius: 50%;
-          background: var(--primary);
-          color: var(--secondary);
-          border: none;
-          font-size: 20px;
-          cursor: pointer;
-          box-shadow: var(--shadow-md);
-          transition: var(--transition);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .refresh-btn:hover {
-          transform: scale(1.1) rotate(90deg);
-          box-shadow: var(--shadow-lg);
+          position: relative;
         }
 
         .empty-state {
           text-align: center;
           padding: 60px 20px;
-          color: var(--gray-500);
+          color: #666666;
         }
 
-        .empty-state i {
-          font-size: 64px;
-          margin-bottom: 20px;
-          opacity: 0.3;
+        .empty-state-icon {
+          font-size: 48px;
+          color: #E0E0E0;
+          margin-bottom: 16px;
         }
 
-        .empty-state p {
+        .empty-state-title {
           font-size: 16px;
+          font-weight: 600;
+          color: #000000;
           margin-bottom: 8px;
         }
 
-        .empty-state small {
+        .empty-state-text {
           font-size: 14px;
-          color: var(--gray-400);
+          color: #666666;
+        }
+
+        .quick-actions {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 16px;
+        }
+
+        .action-btn {
+          background: #000000;
+          color: #FFFFFF;
+          border: none;
+          border-radius: 6px;
+          padding: 14px 20px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          text-align: left;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .action-btn:hover {
+          background: #333333;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .action-icon {
+          font-size: 18px;
+        }
+
+        @media (max-width: 768px) {
+          .dashboard-container {
+            padding: 24px;
+          }
+
+          .dashboard-title {
+            font-size: 24px;
+          }
+
+          .stats-grid {
+            grid-template-columns: 1fr;
+            gap: 16px;
+          }
+
+          .stat-value {
+            font-size: 28px;
+          }
+
+          .chart-section {
+            padding: 24px;
+          }
         }
       `}</style>
 
       <div className="dashboard-container">
-            {/* Header */}
-            <div className="dashboard-header">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <h1>
-                    <i className="fas fa-chart-line"></i>
-                    분석 대시보드
-                  </h1>
-                  <p>게시물 성과를 실시간으로 모니터링하세요</p>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      color: updateColor,
-                      fontSize: '14px'
-                    }}
-                  >
-                    <i
-                      className={`fas fa-sync-alt ${syncIconClass}`}
-                      id="syncIcon"
-                      style={{ color: syncIconColor }}
-                    ></i>
-                    <span id="lastUpdate">{lastUpdate}</span>
-                  </div>
-                  <div style={{ marginTop: '4px', fontSize: '12px', color: 'var(--gray-500)' }}>
-                    <i className="fas fa-database"></i> 실시간 데이터
-                  </div>
-                </div>
-              </div>
-            </div>
+        {/* Header */}
+        <div className="dashboard-header">
+          <h1 className="dashboard-title">Dashboard</h1>
+          <p className="dashboard-subtitle">블로그 통계 및 분석</p>
+        </div>
 
-            {/* Stats Grid */}
-            <div className="stats-grid" id="statsGrid">
-              <div className="stat-card">
-                <div className="stat-icon">
-                  <i className="fas fa-eye"></i>
-                </div>
-                <div className="stat-label">총 조회수</div>
-                <div className="stat-value" id="totalViews">
-                  {totalViews}
-                </div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-icon">
-                  <i className="fas fa-heart"></i>
-                </div>
-                <div className="stat-label">총 좋아요</div>
-                <div className="stat-value" id="totalLikes">
-                  {totalLikes}
-                </div>
-              </div>
-              <div
-                className="stat-card"
-                onClick={handlePostsClick}
-                style={{ cursor: 'pointer' }}
-              >
-                <div className="stat-icon">
-                  <i className="fas fa-file-alt"></i>
-                </div>
-                <div className="stat-label">발행된 게시물</div>
-                <div className="stat-value" id="publishedPosts">
-                  {publishedPosts}
-                </div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-icon">
-                  <i className="fas fa-chart-bar"></i>
-                </div>
-                <div className="stat-label">평균 조회수</div>
-                <div className="stat-value" id="avgViews">
-                  {avgViews}
-                </div>
-              </div>
-            </div>
-
-            {/* Performance Chart */}
-            <div className="chart-container">
-              <h2>
-                <i className="fas fa-chart-area"></i>
-                성과 추이
-              </h2>
-              <div className="chart-wrapper">
-                <canvas ref={chartRef} id="performanceChart"></canvas>
-              </div>
-            </div>
-
-            {/* Top Posts */}
-            <div className="top-posts">
-              <h2>
-                <i className="fas fa-trophy"></i>
-                인기 게시물 Top 5
-              </h2>
-              <div id="topPostsList">
-                {isLoading && totalViews === '...' ? (
-                  <div className="loading">데이터를 불러오는 중...</div>
-                ) : topPosts.length === 0 ? (
-                  <div className="empty-state">
-                    <i className="fas fa-exclamation-circle"></i>
-                    <p>데이터를 불러올 수 없습니다.</p>
-                    <small>백엔드 서버가 실행 중인지 확인해주세요 (포트 5001)</small>
-                  </div>
-                ) : (
-                  topPosts.map((post, index) => (
-                    <div key={index} className="post-item">
-                      <div style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
-                        <span className="post-rank">#{index + 1}</span>
-                        <div className="post-info">
-                          <div className="post-title">{post.title}</div>
-                          <span className="post-category">{post.category}</span>
-                        </div>
-                      </div>
-                      <div className="post-stats">
-                        <div className="post-stat">
-                          <i className="fas fa-eye"></i>
-                          <span>{post.views.toLocaleString()}</span>
-                        </div>
-                        <div className="post-stat">
-                          <i className="fas fa-heart"></i>
-                          <span>{post.likes.toLocaleString()}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
+        {/* Stats Grid */}
+        <div className="stats-grid">
+          <div className="stat-card">
+            <div className="stat-label">Total Posts</div>
+            <div className="stat-value">{stats?.total_posts || 0}</div>
+            <div className="stat-change">전체 포스트</div>
           </div>
 
-      {/* Refresh Button */}
-      <button className="refresh-btn" onClick={loadDashboard} title="새로고침">
-        <i className="fas fa-sync-alt"></i>
-      </button>
+          <div className="stat-card">
+            <div className="stat-label">Published</div>
+            <div className="stat-value">{stats?.published_posts || 0}</div>
+            <div className="stat-change">발행된 글</div>
+          </div>
+
+          <div className="stat-card">
+            <div className="stat-label">Drafts</div>
+            <div className="stat-value">{stats?.draft_posts || 0}</div>
+            <div className="stat-change">임시 저장</div>
+          </div>
+
+          <div className="stat-card">
+            <div className="stat-label">Total Views</div>
+            <div className="stat-value">{(stats?.total_views || 0).toLocaleString()}</div>
+            <div className="stat-change">총 조회수</div>
+          </div>
+
+          <div className="stat-card">
+            <div className="stat-label">Avg. Views</div>
+            <div className="stat-value">{stats?.avg_views_per_post || 0}</div>
+            <div className="stat-change">평균 조회수</div>
+          </div>
+
+          <div className="stat-card">
+            <div className="stat-label">Active Blogs</div>
+            <div className="stat-value">{stats?.active_blogs || 0}</div>
+            <div className="stat-change">연결된 블로그</div>
+          </div>
+        </div>
+
+        {/* Chart Section */}
+        <div className="chart-section">
+          <h2 className="section-title">Performance Trend</h2>
+          <div className="chart-container">
+            <canvas ref={chartRef}></canvas>
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="chart-section">
+          <h2 className="section-title">Quick Actions</h2>
+          <div className="quick-actions">
+            <button className="action-btn" onClick={() => window.location.href = '/editor'}>
+              <span className="action-icon">✏️</span>
+              <span>새 글 작성</span>
+            </button>
+            <button className="action-btn" onClick={() => window.location.href = '/posts'}>
+              <span className="action-icon">📄</span>
+              <span>포스트 관리</span>
+            </button>
+            <button className="action-btn" onClick={() => window.location.href = '/media'}>
+              <span className="action-icon">🖼️</span>
+              <span>미디어 라이브러리</span>
+            </button>
+            <button className="action-btn" onClick={() => window.location.href = '/settings'}>
+              <span className="action-icon">⚙️</span>
+              <span>설정</span>
+            </button>
+          </div>
+        </div>
+      </div>
     </AppLayout>
   );
 }
