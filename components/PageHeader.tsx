@@ -2,16 +2,17 @@ import Link from 'next/link';
 
 interface Breadcrumb {
   label: string;
-  href: string;
+  href?: string;
 }
 
 interface PageHeaderProps {
   title: string;
   breadcrumbs?: Breadcrumb[];
   actions?: React.ReactNode;
+  subtitle?: string;
 }
 
-export default function PageHeader({ title, breadcrumbs, actions }: PageHeaderProps) {
+export default function PageHeader({ title, breadcrumbs, actions, subtitle }: PageHeaderProps) {
   return (
     <div style={{
       display: 'flex',
@@ -32,16 +33,25 @@ export default function PageHeader({ title, breadcrumbs, actions }: PageHeaderPr
             {breadcrumbs.map((crumb, index) => (
               <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 {index > 0 && <span>/</span>}
-                <Link
-                  href={crumb.href}
-                  style={{
-                    color: index === breadcrumbs.length - 1 ? '#111827' : '#6b7280',
-                    textDecoration: 'none',
-                    fontWeight: index === breadcrumbs.length - 1 ? 600 : 400
-                  }}
-                >
-                  {crumb.label}
-                </Link>
+                {crumb.href ? (
+                  <Link
+                    href={crumb.href}
+                    style={{
+                      color: index === breadcrumbs.length - 1 ? '#111827' : '#6b7280',
+                      textDecoration: 'none',
+                      fontWeight: index === breadcrumbs.length - 1 ? 600 : 400
+                    }}
+                  >
+                    {crumb.label}
+                  </Link>
+                ) : (
+                  <span style={{
+                    color: '#111827',
+                    fontWeight: 600
+                  }}>
+                    {crumb.label}
+                  </span>
+                )}
               </div>
             ))}
           </div>
@@ -54,6 +64,15 @@ export default function PageHeader({ title, breadcrumbs, actions }: PageHeaderPr
         }}>
           {title}
         </h1>
+        {subtitle && (
+          <p style={{
+            fontSize: '16px',
+            color: '#6b7280',
+            margin: '8px 0 0 0'
+          }}>
+            {subtitle}
+          </p>
+        )}
       </div>
       {actions && (
         <div style={{
