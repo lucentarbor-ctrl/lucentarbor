@@ -3,19 +3,48 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { successResponse, handleDatabaseError, serverError, errorResponse } from '@/lib/api-response';
 
 // GET /api/blogs/[id]
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
+    const blogId = parseInt(id);
+
+    if (isNaN(blogId)) {
+      return errorResponse('유효하지 않은 블로그 ID입니다', {
+        statusCode: 400,
+      });
+    }
+
     const blog = await prisma.blog.findUnique({
-      where: { id: parseInt(id) },
-      include: { categories: true, scheduledPosts: { take: 10, orderBy: { scheduledTime: 'desc' } } },
+      where: { id: blogId },
+      include: {
+        categories: true,
+        scheduledPosts: {
+          take: 10,
+          orderBy: { scheduledTime: 'desc' }
+        }
+      },
     });
-    if (!blog) return NextResponse.json({ error: 'Blog not found' }, { status: 404 });
-    return NextResponse.json({ status: 'success', data: blog });
+
+    if (!blog) {
+      return errorResponse('블로그를 찾을 수 없습니다', {
+        statusCode: 404,
+      });
+    }
+
+    return successResponse(blog, {
+      message: 'Blog fetched successfully',
+    });
   } catch (error: any) {
-    return NextResponse.json({ error: 'Failed to fetch blog', message: error.message }, { status: 500 });
+    // Prisma 에러인 경우
+    if (error.code) {
+      return handleDatabaseError(error);
+    }
+
+    // 일반 서버 에러
+    return serverError(error, 'Failed to fetch blog');
   }
 }
 
@@ -23,9 +52,18 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
+    const blogId = parseInt(id);
+
+    if (isNaN(blogId)) {
+      return errorResponse('유효하지 않은 블로그 ID입니다', {
+        statusCode: 400,
+      });
+    }
+
     const data = await req.json();
+
     const blog = await prisma.blog.update({
-      where: { id: parseInt(id) },
+      where: { id: blogId },
       data: {
         name: data.name,
         platform: data.platform,
@@ -37,9 +75,18 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         isActive: data.is_active,
       },
     });
-    return NextResponse.json({ status: 'success', data: blog, message: '블로그가 업데이트되었습니다.' });
+
+    return successResponse(blog, {
+      message: '블로그가 업데이트되었습니다.',
+    });
   } catch (error: any) {
-    return NextResponse.json({ error: 'Failed to update blog', message: error.message }, { status: 500 });
+    // Prisma 에러인 경우
+    if (error.code) {
+      return handleDatabaseError(error);
+    }
+
+    // 일반 서버 에러
+    return serverError(error, 'Failed to update blog');
   }
 }
 
@@ -47,9 +94,28 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    await prisma.blog.delete({ where: { id: parseInt(id) } });
-    return NextResponse.json({ status: 'success', message: '블로그가 삭제되었습니다.' });
+    const blogId = parseInt(id);
+
+    if (isNaN(blogId)) {
+      return errorResponse('유효하지 않은 블로그 ID입니다', {
+        statusCode: 400,
+      });
+    }
+
+    await prisma.blog.delete({
+      where: { id: blogId }
+    });
+
+    return successResponse(null, {
+      message: '블로그가 삭제되었습니다.',
+    });
   } catch (error: any) {
-    return NextResponse.json({ error: 'Failed to delete blog', message: error.message }, { status: 500 });
+    // Prisma 에러인 경우
+    if (error.code) {
+      return handleDatabaseError(error);
+    }
+
+    // 일반 서버 에러
+    return serverError(error, 'Failed to delete blog');
   }
 }

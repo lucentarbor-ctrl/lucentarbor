@@ -6,6 +6,8 @@ import AppLayout from '@/components/AppLayout';
 import PageHeader from '@/components/PageHeader';
 import DataTable from '@/components/common/DataTable';
 import StatCard from '@/components/common/StatCard';
+import LoadingSpinner from '@/components/LoadingSpinner';
+import ErrorMessage from '@/components/ErrorMessage';
 
 interface Post {
   id: string | number;
@@ -54,31 +56,43 @@ export default function PostsPage() {
   const [statusFilter, setStatusFilter] = useState<FilterType>('all');
   const [sortBy, setSortBy] = useState<SortType>('newest');
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Load blogs from API
   const loadBlogs = async () => {
     try {
       const response = await fetch('/api/blogs');
-      if (!response.ok) throw new Error('Failed to load blogs');
+      if (!response.ok) throw new Error('블로그 목록을 불러오는데 실패했습니다');
+
       const result = await response.json();
+
+      if (result.status === 'error') {
+        throw new Error(result.message || '블로그 데이터 로드 실패');
+      }
+
       const blogsData = result.data || [];
 
       // Load categories for each blog
       for (let blog of blogsData) {
-        const categoriesResponse = await fetch(`/api/categories?blog_id=${blog.id}`);
-        if (categoriesResponse.ok) {
-          const catResult = await categoriesResponse.json();
-          blog.categories = catResult.data || [];
-        } else {
+        try {
+          const categoriesResponse = await fetch(`/api/categories?blog_id=${blog.id}`);
+          if (categoriesResponse.ok) {
+            const catResult = await categoriesResponse.json();
+            blog.categories = catResult.data || [];
+          } else {
+            blog.categories = [];
+          }
+        } catch (err) {
+          console.error(`카테고리 로드 실패 (블로그 ${blog.id}):`, err);
           blog.categories = [];
         }
       }
 
       setBlogs(blogsData);
       return blogsData;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading blogs:', error);
-      return [];
+      throw error;
     }
   };
 
@@ -129,9 +143,16 @@ export default function PostsPage() {
   // Initialize data
   useEffect(() => {
     const initialize = async () => {
-      setIsLoading(true);
-      await Promise.all([loadBlogs(), loadPosts()]);
-      setIsLoading(false);
+      try {
+        setIsLoading(true);
+        setError(null);
+        await Promise.all([loadBlogs(), loadPosts()]);
+      } catch (error: any) {
+        console.error('Failed to initialize posts page:', error);
+        setError(error.message || '데이터를 불러오는 중 오류가 발생했습니다');
+      } finally {
+        setIsLoading(false);
+      }
     };
     initialize();
   }, []);
@@ -361,6 +382,44 @@ export default function PostsPage() {
       새 글 작성
     </button>
   );
+
+  // 로딩 상태
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <LoadingSpinner
+          size="lg"
+          message="포스트 목록을 불러오는 중..."
+        />
+      </AppLayout>
+    );
+  }
+
+  // 에러 상태
+  if (error) {
+    return (
+      <AppLayout>
+        <ErrorMessage
+          title="포스트 로드 실패"
+          message={error}
+          onRetry={() => {
+            const initialize = async () => {
+              try {
+                setIsLoading(true);
+                setError(null);
+                await Promise.all([loadBlogs(), loadPosts()]);
+              } catch (error: any) {
+                setError(error.message || '데이터를 불러오는 중 오류가 발생했습니다');
+              } finally {
+                setIsLoading(false);
+              }
+            };
+            initialize();
+          }}
+        />
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>

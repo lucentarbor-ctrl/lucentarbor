@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import AppLayout from '@/components/AppLayout';
 import PageHeader from '@/components/PageHeader';
+import LoadingSpinner from '@/components/LoadingSpinner';
+import ErrorMessage from '@/components/ErrorMessage';
 
 interface Blog {
   id: number;
@@ -45,10 +47,24 @@ export default function WordPressPage() {
   const [modalBlogId, setModalBlogId] = useState('');
   const [modalStatus, setModalStatus] = useState('publish');
   const [modalAdsense, setModalAdsense] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Load data on mount
   useEffect(() => {
-    loadData();
+    const initialize = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        await loadData();
+      } catch (error: any) {
+        console.error('Failed to load data:', error);
+        setError(error.message || '데이터를 불러오는 중 오류가 발생했습니다');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    initialize();
   }, []);
 
   // Filter posts when filters change
@@ -212,6 +228,35 @@ export default function WordPressPage() {
     { label: 'Home', href: '/' },
     { label: 'WordPress', href: '/blogs' }
   ];
+
+  // 로딩 상태
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <LoadingSpinner
+          size="lg"
+          message="WordPress 데이터를 불러오는 중..."
+        />
+      </AppLayout>
+    );
+  }
+
+  // 에러 상태
+  if (error) {
+    return (
+      <AppLayout>
+        <ErrorMessage
+          title="데이터 로드 실패"
+          message={error}
+          onRetry={() => {
+            setError(null);
+            setIsLoading(true);
+            loadData().finally(() => setIsLoading(false));
+          }}
+        />
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>

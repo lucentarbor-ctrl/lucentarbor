@@ -3,6 +3,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { successResponse, handleDatabaseError, serverError, validationError } from '@/lib/api-response';
 
 // GET /api/blogs - 블로그 목록
 export async function GET() {
@@ -13,9 +14,18 @@ export async function GET() {
         _count: { select: { categories: true, scheduledPosts: true } },
       },
     });
-    return NextResponse.json({ status: 'success', data: blogs });
+
+    return successResponse(blogs, {
+      message: 'Blogs fetched successfully',
+    });
   } catch (error: any) {
-    return NextResponse.json({ error: 'Failed to fetch blogs', message: error.message }, { status: 500 });
+    // Prisma 에러인 경우
+    if (error.code) {
+      return handleDatabaseError(error);
+    }
+
+    // 일반 서버 에러
+    return serverError(error, 'Failed to fetch blogs');
   }
 }
 
@@ -23,6 +33,14 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const data = await req.json();
+
+    // 필수 필드 검증
+    if (!data.name || !data.platform) {
+      return validationError('블로그 이름과 플랫폼은 필수 항목입니다', {
+        required: ['name', 'platform'],
+      });
+    }
+
     const blog = await prisma.blog.create({
       data: {
         name: data.name,
@@ -35,8 +53,18 @@ export async function POST(req: NextRequest) {
         isActive: data.is_active !== false,
       },
     });
-    return NextResponse.json({ status: 'success', data: blog, message: '블로그가 생성되었습니다.' });
+
+    return successResponse(blog, {
+      message: '블로그가 생성되었습니다.',
+      status: 201,
+    });
   } catch (error: any) {
-    return NextResponse.json({ error: 'Failed to create blog', message: error.message }, { status: 500 });
+    // Prisma 에러인 경우
+    if (error.code) {
+      return handleDatabaseError(error);
+    }
+
+    // 일반 서버 에러
+    return serverError(error, 'Failed to create blog');
   }
 }

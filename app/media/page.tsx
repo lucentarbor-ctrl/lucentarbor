@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef, ChangeEvent } from 'react';
 import AppLayout from '@/components/AppLayout';
 import PageHeader from '@/components/PageHeader';
+import LoadingSpinner from '@/components/LoadingSpinner';
+import ErrorMessage from '@/components/ErrorMessage';
 
 interface MediaFile {
   id: number;
@@ -20,6 +22,7 @@ interface MediaFile {
 export default function MediaPage() {
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedMediaIds, setSelectedMediaIds] = useState<Set<number>>(new Set());
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [aiModalOpen, setAiModalOpen] = useState(false);
@@ -37,16 +40,27 @@ export default function MediaPage() {
 
   async function loadMedia() {
     try {
+      setLoading(true);
+      setError(null);
+
       const response = await fetch('/api/media/list');
+
+      if (!response.ok) {
+        throw new Error('미디어 목록을 불러오는데 실패했습니다');
+      }
+
       const result = await response.json();
 
-      if (result.status === 'success' && result.data?.files && result.data.files.length > 0) {
+      if (result.status === 'success' && result.data?.files) {
         setMediaFiles(result.data.files);
+      } else if (result.status === 'error') {
+        throw new Error(result.message || '미디어 데이터 로드 실패');
       } else {
         setMediaFiles([]);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('미디어 로드 실패:', error);
+      setError(error.message || '미디어를 불러오는 중 오류가 발생했습니다');
       setMediaFiles([]);
     } finally {
       setLoading(false);
@@ -343,6 +357,31 @@ export default function MediaPage() {
     </>
   );
 
+  // 로딩 상태
+  if (loading) {
+    return (
+      <AppLayout>
+        <LoadingSpinner
+          size="lg"
+          message="미디어를 불러오는 중..."
+        />
+      </AppLayout>
+    );
+  }
+
+  // 에러 상태
+  if (error) {
+    return (
+      <AppLayout>
+        <ErrorMessage
+          title="미디어 로드 실패"
+          message={error}
+          onRetry={loadMedia}
+        />
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout>
       <PageHeader
@@ -352,12 +391,7 @@ export default function MediaPage() {
       />
 
       <div style={{marginTop: '24px'}}>
-        {loading ? (
-          <div style={{textAlign: 'center', padding: '60px', color: '#6b7280'}}>
-            <i className="fas fa-spinner fa-spin" style={{fontSize: '32px', marginBottom: '16px'}}></i>
-            <p>미디어를 불러오는 중...</p>
-          </div>
-        ) : mediaFiles.length > 0 ? (
+        {mediaFiles.length > 0 ? (
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
