@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import { MenuItem } from './PrimarySidebar';
 
 interface SecondarySidebarProps {
@@ -22,29 +23,30 @@ export default function SecondarySidebar({ isOpen, activeMenuItem, onClose }: Se
     }
   };
 
-  // 단일 페이지 메뉴 처리
-  const handleSinglePageNav = (menuId: string) => {
-    const routes: Record<string, string> = {
-      'home': '/',
-      'wordpress': '/blogs',
-      'dashboard': '/dashboard',
-      'settings': '/settings',
-    };
+  // 단일 페이지 메뉴 처리 - useEffect로 이동하여 렌더링 중 navigation 방지
+  useEffect(() => {
+    if (activeMenuItem && !activeMenuItem.subItems) {
+      const routes: Record<string, string> = {
+        'home': '/',
+        'wordpress': '/blogs',
+        'dashboard': '/dashboard',
+        'settings': '/settings',
+      };
 
-    const href = routes[menuId];
-    if (href) {
-      router.push(href);
-      if (window.innerWidth < 768) {
-        onClose();
+      const href = routes[activeMenuItem.id];
+      if (href) {
+        router.push(href);
+        if (window.innerWidth < 768) {
+          onClose();
+        }
       }
     }
-  };
+  }, [activeMenuItem, router, onClose]);
 
   if (!activeMenuItem) return null;
 
-  // 서브 아이템이 없는 메뉴는 바로 이동
+  // 서브 아이템이 없는 메뉴는 렌더링하지 않음 (useEffect에서 처리)
   if (!activeMenuItem.subItems) {
-    handleSinglePageNav(activeMenuItem.id);
     return null;
   }
 
