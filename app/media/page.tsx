@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, ChangeEvent } from 'react';
 import AppLayout from '@/components/AppLayout';
+import PageHeader from '@/components/PageHeader';
 
 interface MediaFile {
   id: number;
@@ -16,7 +17,7 @@ interface MediaFile {
   ai_model?: string;
 }
 
-export default function MediaRealPage() {
+export default function MediaPage() {
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMediaIds, setSelectedMediaIds] = useState<Set<number>>(new Set());
@@ -26,7 +27,6 @@ export default function MediaRealPage() {
   const [aiPrompt, setAiPrompt] = useState('');
   const [aiModel, setAiModel] = useState('dalle');
   const [aiSize, setAiSize] = useState('1024x1024');
-  const [aiQuality, setAiQuality] = useState('standard');
   const [uploading, setUploading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -40,7 +40,7 @@ export default function MediaRealPage() {
       const response = await fetch('/api/media/list');
       const result = await response.json();
 
-      if (result.status === 'success' && result.data.files.length > 0) {
+      if (result.status === 'success' && result.data?.files && result.data.files.length > 0) {
         setMediaFiles(result.data.files);
       } else {
         setMediaFiles([]);
@@ -122,46 +122,6 @@ export default function MediaRealPage() {
         }
       } catch (error) {
         console.error(`미디어 ${mediaId} 삭제 오류:`, error);
-        failCount++;
-      }
-    }
-
-    if (successCount > 0) {
-      alert(`${successCount}개 파일이 삭제되었습니다.${failCount > 0 ? ` (실패: ${failCount}개)` : ''}`);
-      setSelectedMediaIds(new Set());
-      loadMedia();
-    } else {
-      alert('파일 삭제에 실패했습니다.');
-    }
-  }
-
-  async function deleteAll() {
-    if (mediaFiles.length === 0) {
-      alert('삭제할 미디어가 없습니다.');
-      return;
-    }
-
-    if (!confirm(`모든 미디어 파일 ${mediaFiles.length}개를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) {
-      return;
-    }
-
-    let successCount = 0;
-    let failCount = 0;
-
-    for (const file of mediaFiles) {
-      try {
-        const response = await fetch(`/api/media/${file.id}`, {
-          method: 'DELETE'
-        });
-
-        const result = await response.json();
-        if (result.status === 'success') {
-          successCount++;
-        } else {
-          failCount++;
-        }
-      } catch (error) {
-        console.error(`미디어 ${file.id} 삭제 오류:`, error);
         failCount++;
       }
     }
@@ -305,125 +265,284 @@ export default function MediaRealPage() {
     setAiPrompt('');
   }
 
+  const breadcrumbs = [
+    { label: 'Home', href: '/' },
+    { label: '미디어', href: '/media' }
+  ];
+
+  const actions = (
+    <>
+      {selectedMediaIds.size > 0 && (
+        <>
+          <button
+            onClick={toggleSelectAll}
+            style={{
+              padding: '10px 20px',
+              background: '#f3f4f6',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: '500',
+              fontSize: '14px',
+              color: '#111827'
+            }}
+          >
+            <i className="fas fa-check-square" style={{marginRight: '8px'}}></i>
+            전체 선택/해제
+          </button>
+          <button
+            onClick={deleteSelected}
+            style={{
+              padding: '10px 20px',
+              background: '#ef4444',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: '500',
+              fontSize: '14px'
+            }}
+          >
+            <i className="fas fa-trash" style={{marginRight: '8px'}}></i>
+            선택 삭제 ({selectedMediaIds.size})
+          </button>
+        </>
+      )}
+      <button
+        onClick={() => setAiModalOpen(true)}
+        style={{
+          padding: '10px 20px',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white',
+          border: 'none',
+          borderRadius: '8px',
+          cursor: 'pointer',
+          fontWeight: '500',
+          fontSize: '14px'
+        }}
+      >
+        <i className="fas fa-magic" style={{marginRight: '8px'}}></i>
+        AI 이미지 생성
+      </button>
+      <button
+        onClick={() => setUploadModalOpen(true)}
+        style={{
+          padding: '10px 20px',
+          background: '#3b82f6',
+          color: 'white',
+          border: 'none',
+          borderRadius: '8px',
+          cursor: 'pointer',
+          fontWeight: '500',
+          fontSize: '14px'
+        }}
+      >
+        <i className="fas fa-upload" style={{marginRight: '8px'}}></i>
+        업로드
+      </button>
+    </>
+  );
+
   return (
     <AppLayout>
-      <div className="media-container">
-          {/* 헤더 */}
-          <div className="media-header">
-            <h1>
-              <i className="fas fa-images"></i>
-              미디어 라이브러리
-            </h1>
-            <div className="header-actions">
-              <button className="btn btn-secondary" onClick={() => setAiModalOpen(true)}>
-                <i className="fas fa-magic"></i>
-                AI 이미지 생성
-              </button>
-              <button className="btn btn-primary" onClick={() => setUploadModalOpen(true)}>
-                <i className="fas fa-upload"></i>
-                업로드
-              </button>
-            </div>
+      <PageHeader
+        title="미디어 라이브러리"
+        breadcrumbs={breadcrumbs}
+        actions={actions}
+      />
+
+      <div style={{marginTop: '24px'}}>
+        {loading ? (
+          <div style={{textAlign: 'center', padding: '60px', color: '#6b7280'}}>
+            <i className="fas fa-spinner fa-spin" style={{fontSize: '32px', marginBottom: '16px'}}></i>
+            <p>미디어를 불러오는 중...</p>
           </div>
+        ) : mediaFiles.length > 0 ? (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+            gap: '20px'
+          }}>
+            {mediaFiles.map(file => {
+              const size = (file.file_size / 1024).toFixed(1);
+              const isSelected = selectedMediaIds.has(file.id);
 
-          {/* 선택 툴바 */}
-          {selectedMediaIds.size > 0 && (
-            <div className="selection-toolbar active">
-              <div className="selection-info">
-                <span>{selectedMediaIds.size}</span>개 항목 선택됨
-              </div>
-              <div className="selection-actions">
-                <button className="btn btn-select-all" onClick={toggleSelectAll}>
-                  <i className="fas fa-check-square"></i>
-                  전체 선택/해제
-                </button>
-                <button className="btn btn-danger" onClick={deleteSelected}>
-                  <i className="fas fa-trash"></i>
-                  선택 삭제
-                </button>
-                <button className="btn btn-danger" onClick={deleteAll}>
-                  <i className="fas fa-trash-alt"></i>
-                  전체 삭제
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* 미디어 그리드 */}
-          <div className="media-grid">
-            {loading ? (
-              <div className="loading">미디어를 불러오는 중...</div>
-            ) : mediaFiles.length > 0 ? (
-              mediaFiles.map(file => {
-                const url = `http://localhost:5001${file.url}`;
-                const size = (file.file_size / 1024).toFixed(1);
-                const isSelected = selectedMediaIds.has(file.id);
-
-                return (
+              return (
+                <div
+                  key={file.id}
+                  style={{
+                    background: 'white',
+                    border: isSelected ? '3px solid #3b82f6' : '1px solid #e5e7eb',
+                    borderRadius: '12px',
+                    overflow: 'hidden',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    position: 'relative'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isSelected) {
+                      e.currentTarget.style.transform = 'translateY(-4px)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'none';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => toggleMediaSelection(file.id)}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      position: 'absolute',
+                      top: '12px',
+                      left: '12px',
+                      zIndex: 10,
+                      width: '20px',
+                      height: '20px',
+                      cursor: 'pointer'
+                    }}
+                  />
                   <div
-                    key={file.id}
-                    className={`media-item ${isSelected ? 'selected' : ''}`}
-                    data-id={file.id}
+                    onClick={() => selectMedia(file)}
+                    style={{
+                      width: '100%',
+                      height: '200px',
+                      background: '#f3f4f6',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      overflow: 'hidden'
+                    }}
                   >
-                    <input
-                      type="checkbox"
-                      className="media-checkbox"
-                      checked={isSelected}
-                      onChange={() => toggleMediaSelection(file.id)}
-                      onClick={(e) => e.stopPropagation()}
+                    <img
+                      src={file.url}
+                      alt={file.filename}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover'
+                      }}
                     />
-                    <div className="media-preview" onClick={() => selectMedia(file)}>
-                      <img src={file.url} alt={file.filename} />
-                    </div>
-                    <div className="media-info">
-                      <div className="media-filename">{file.filename}</div>
-                      <div className="media-meta">
-                        <span>{size} KB</span>
-                        <span>{file.width}x{file.height}</span>
-                      </div>
-                      {file.is_ai_generated && (
-                        <div className="media-badge ai">
-                          <i className="fas fa-magic"></i> AI 생성
-                        </div>
-                      )}
-                      <div className="media-actions">
-                        <button
-                          className="btn-icon btn-danger"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteMedia(file.id, file.filename);
-                          }}
-                        >
-                          <i className="fas fa-trash"></i>
-                          삭제
-                        </button>
-                      </div>
-                    </div>
                   </div>
-                );
-              })
-            ) : (
-              <div className="empty-state" style={{ gridColumn: '1 / -1' }}>
-                <i className="fas fa-images"></i>
-                <p>아직 업로드된 미디어가 없습니다.</p>
-                <small>이미지를 업로드하거나 AI로 생성해보세요.</small>
-              </div>
-            )}
+                  <div style={{padding: '16px'}}>
+                    <div style={{
+                      fontWeight: '600',
+                      color: '#111827',
+                      marginBottom: '8px',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      fontSize: '14px'
+                    }}>
+                      {file.filename}
+                    </div>
+                    <div style={{
+                      fontSize: '12px',
+                      color: '#6b7280',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      marginBottom: '8px'
+                    }}>
+                      <span>{size} KB</span>
+                      <span>{file.width}x{file.height}</span>
+                    </div>
+                    {file.is_ai_generated && (
+                      <div style={{
+                        display: 'inline-block',
+                        padding: '4px 8px',
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        borderRadius: '6px',
+                        fontSize: '11px',
+                        fontWeight: '600',
+                        color: 'white',
+                        marginBottom: '12px'
+                      }}>
+                        <i className="fas fa-magic"></i> AI 생성
+                      </div>
+                    )}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteMedia(file.id, file.filename);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        background: '#ef4444',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        fontWeight: '500'
+                      }}
+                    >
+                      <i className="fas fa-trash"></i> 삭제
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        </div>
+        ) : (
+          <div style={{
+            textAlign: 'center',
+            padding: '80px 20px',
+            color: '#9ca3af',
+            background: 'white',
+            borderRadius: '12px',
+            border: '2px dashed #e5e7eb'
+          }}>
+            <i className="fas fa-images" style={{fontSize: '64px', marginBottom: '20px', opacity: 0.3}}></i>
+            <p style={{fontSize: '18px', fontWeight: '600', marginBottom: '8px'}}>아직 업로드된 미디어가 없습니다</p>
+            <small style={{color: '#6b7280'}}>이미지를 업로드하거나 AI로 생성해보세요</small>
+          </div>
+        )}
+      </div>
 
       {/* 업로드 모달 */}
       {uploadModalOpen && (
-        <div className="modal active">
-          <div className="modal-content">
-            <h2 className="modal-header">이미지 업로드</h2>
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          zIndex: 10000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '12px',
+            padding: '32px',
+            maxWidth: '500px',
+            width: '90%',
+            maxHeight: '90vh',
+            overflowY: 'auto'
+          }}>
+            <h2 style={{fontSize: '24px', fontWeight: '700', marginBottom: '24px', color: '#111827'}}>
+              이미지 업로드
+            </h2>
             <div
-              className="upload-area"
               onClick={() => fileInputRef.current?.click()}
+              style={{
+                border: '3px dashed #d1d5db',
+                borderRadius: '8px',
+                padding: '40px',
+                textAlign: 'center',
+                cursor: 'pointer',
+                marginBottom: '20px'
+              }}
             >
-              <i className="fas fa-cloud-upload-alt"></i>
+              <i className="fas fa-cloud-upload-alt" style={{fontSize: '48px', color: '#9ca3af', marginBottom: '16px', display: 'block'}}></i>
               <p>클릭하거나 파일을 드래그하세요</p>
-              <small>PNG, JPG, GIF, WebP, SVG (최대 16MB)</small>
+              <small style={{color: '#6b7280'}}>PNG, JPG, GIF, WebP, SVG (최대 16MB)</small>
             </div>
             <input
               type="file"
@@ -434,20 +553,40 @@ export default function MediaRealPage() {
             />
 
             {selectedFile && (
-              <div className="form-group">
-                <label className="form-label">선택된 파일</label>
-                <p>{selectedFile.name}</p>
+              <div style={{marginBottom: '20px'}}>
+                <label style={{display: 'block', fontWeight: '600', marginBottom: '8px', color: '#111827'}}>
+                  선택된 파일
+                </label>
+                <p style={{color: '#6b7280'}}>{selectedFile.name}</p>
               </div>
             )}
 
-            <div className="modal-actions">
-              <button className="btn btn-secondary" onClick={closeUploadModal}>
+            <div style={{display: 'flex', gap: '12px', justifyContent: 'flex-end'}}>
+              <button
+                onClick={closeUploadModal}
+                style={{
+                  padding: '10px 20px',
+                  background: '#f3f4f6',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: '500'
+                }}
+              >
                 취소
               </button>
               <button
-                className="btn btn-primary"
                 onClick={uploadFile}
                 disabled={!selectedFile || uploading}
+                style={{
+                  padding: '10px 20px',
+                  background: uploading ? '#9ca3af' : '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: uploading ? 'not-allowed' : 'pointer',
+                  fontWeight: '500'
+                }}
               >
                 {uploading ? (
                   <>
@@ -466,43 +605,90 @@ export default function MediaRealPage() {
 
       {/* AI 이미지 생성 모달 */}
       {aiModalOpen && (
-        <div className="modal active">
-          <div className="modal-content">
-            <h2 className="modal-header">AI 이미지 생성</h2>
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          zIndex: 10000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '12px',
+            padding: '32px',
+            maxWidth: '500px',
+            width: '90%',
+            maxHeight: '90vh',
+            overflowY: 'auto'
+          }}>
+            <h2 style={{fontSize: '24px', fontWeight: '700', marginBottom: '24px', color: '#111827'}}>
+              AI 이미지 생성
+            </h2>
 
-            <div className="form-group">
-              <label className="form-label">AI 모델</label>
+            <div style={{marginBottom: '20px'}}>
+              <label style={{display: 'block', fontWeight: '600', marginBottom: '8px', color: '#111827'}}>
+                AI 모델
+              </label>
               <select
-                className="form-input"
                 value={aiModel}
                 onChange={(e) => setAiModel(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '8px',
+                  fontFamily: 'inherit'
+                }}
               >
                 <option value="dalle">DALL-E 3 (OpenAI)</option>
                 <option value="huggingface">Stable Diffusion (Hugging Face)</option>
                 <option value="stability">Stable Diffusion XL (Stability AI)</option>
                 <option value="replicate">SDXL (Replicate)</option>
               </select>
-              <small style={{ color: 'var(--gray-600)', marginTop: '4px', display: 'block' }}>
+              <small style={{color: '#6b7280', marginTop: '4px', display: 'block'}}>
                 <i className="fas fa-info-circle"></i> 설정에서 각 모델의 API 키를 등록해야 사용할 수 있습니다.
               </small>
             </div>
 
-            <div className="form-group">
-              <label className="form-label">프롬프트</label>
+            <div style={{marginBottom: '20px'}}>
+              <label style={{display: 'block', fontWeight: '600', marginBottom: '8px', color: '#111827'}}>
+                프롬프트
+              </label>
               <textarea
-                className="form-input"
                 value={aiPrompt}
                 onChange={(e) => setAiPrompt(e.target.value)}
                 placeholder="어떤 이미지를 만들고 싶으신가요? (영문으로 입력하세요)"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '8px',
+                  fontFamily: 'inherit',
+                  minHeight: '80px',
+                  resize: 'vertical'
+                }}
               />
             </div>
 
-            <div className="form-group">
-              <label className="form-label">크기</label>
+            <div style={{marginBottom: '20px'}}>
+              <label style={{display: 'block', fontWeight: '600', marginBottom: '8px', color: '#111827'}}>
+                크기
+              </label>
               <select
-                className="form-input"
                 value={aiSize}
                 onChange={(e) => setAiSize(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '8px',
+                  fontFamily: 'inherit'
+                }}
               >
                 <option value="512x512">512x512</option>
                 <option value="1024x1024">1024x1024</option>
@@ -511,26 +697,32 @@ export default function MediaRealPage() {
               </select>
             </div>
 
-            <div className="form-group">
-              <label className="form-label">품질</label>
-              <select
-                className="form-input"
-                value={aiQuality}
-                onChange={(e) => setAiQuality(e.target.value)}
+            <div style={{display: 'flex', gap: '12px', justifyContent: 'flex-end'}}>
+              <button
+                onClick={closeAIModal}
+                style={{
+                  padding: '10px 20px',
+                  background: '#f3f4f6',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: '500'
+                }}
               >
-                <option value="standard">Standard</option>
-                <option value="hd">HD</option>
-              </select>
-            </div>
-
-            <div className="modal-actions">
-              <button className="btn btn-secondary" onClick={closeAIModal}>
                 취소
               </button>
               <button
-                className="btn btn-primary"
                 onClick={generateAIImage}
                 disabled={generating}
+                style={{
+                  padding: '10px 20px',
+                  background: generating ? '#9ca3af' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: generating ? 'not-allowed' : 'pointer',
+                  fontWeight: '500'
+                }}
               >
                 {generating ? (
                   <>
@@ -546,339 +738,6 @@ export default function MediaRealPage() {
           </div>
         </div>
       )}
-
-      <style jsx>{`
-        .media-container {
-          padding: 40px;
-        }
-
-        .media-header {
-          background: var(--secondary);
-          border: 2px solid var(--gray-300);
-          border-radius: var(--radius-lg);
-          padding: 32px;
-          margin-bottom: 30px;
-          box-shadow: var(--shadow-sm);
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-
-        .media-header h1 {
-          font-size: 32px;
-          font-weight: 700;
-          color: var(--primary);
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        }
-
-        .header-actions {
-          display: flex;
-          gap: 12px;
-        }
-
-        .btn {
-          padding: 12px 24px;
-          border-radius: var(--radius);
-          font-weight: 600;
-          border: none;
-          cursor: pointer;
-          transition: var(--transition);
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .btn-primary {
-          background: var(--primary);
-          color: var(--secondary);
-        }
-
-        .btn-primary:hover {
-          background: var(--gray-800);
-          transform: translateY(-2px);
-          box-shadow: var(--shadow-md);
-        }
-
-        .btn-primary:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-          transform: none;
-        }
-
-        .btn-secondary {
-          background: var(--secondary);
-          color: var(--primary);
-          border: 2px solid var(--primary);
-        }
-
-        .btn-secondary:hover {
-          background: var(--gray-100);
-        }
-
-        .media-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-          gap: 20px;
-          margin-bottom: 30px;
-        }
-
-        .media-item {
-          background: var(--secondary);
-          border: 2px solid var(--gray-300);
-          border-radius: var(--radius);
-          overflow: hidden;
-          cursor: pointer;
-          transition: var(--transition);
-          position: relative;
-        }
-
-        .media-item:hover {
-          transform: translateY(-4px);
-          box-shadow: var(--shadow-md);
-          border-color: var(--primary);
-        }
-
-        .media-item.selected {
-          outline: 3px solid var(--primary);
-          outline-offset: -3px;
-        }
-
-        .media-preview {
-          width: 100%;
-          height: 200px;
-          background: var(--gray-100);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          overflow: hidden;
-        }
-
-        .media-preview img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
-
-        .media-preview i {
-          font-size: 48px;
-          color: var(--gray-400);
-        }
-
-        .media-info {
-          padding: 16px;
-          position: relative;
-        }
-
-        .media-filename {
-          font-weight: 600;
-          color: var(--primary);
-          margin-bottom: 8px;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        .media-actions {
-          display: flex;
-          gap: 8px;
-          margin-top: 12px;
-        }
-
-        .btn-icon {
-          padding: 8px 12px;
-          border-radius: var(--radius);
-          font-weight: 600;
-          border: none;
-          cursor: pointer;
-          transition: var(--transition);
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          font-size: 12px;
-        }
-
-        .btn-danger {
-          background: #ef4444;
-          color: white;
-        }
-
-        .btn-danger:hover {
-          background: #dc2626;
-        }
-
-        .media-meta {
-          font-size: 12px;
-          color: var(--gray-600);
-          display: flex;
-          justify-content: space-between;
-        }
-
-        .media-badge {
-          display: inline-block;
-          padding: 4px 8px;
-          background: var(--gray-100);
-          border-radius: 6px;
-          font-size: 11px;
-          font-weight: 600;
-          color: var(--primary);
-          margin-top: 8px;
-        }
-
-        .media-badge.ai {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
-        }
-
-        .media-checkbox {
-          position: absolute;
-          top: 12px;
-          left: 12px;
-          z-index: 10;
-          width: 24px;
-          height: 24px;
-          cursor: pointer;
-          accent-color: var(--primary);
-        }
-
-        .selection-toolbar {
-          background: var(--secondary);
-          border: 2px solid var(--gray-300);
-          border-radius: var(--radius);
-          padding: 16px 24px;
-          margin-bottom: 20px;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          box-shadow: var(--shadow-md);
-        }
-
-        .selection-info {
-          font-weight: 600;
-          color: var(--primary);
-        }
-
-        .selection-actions {
-          display: flex;
-          gap: 12px;
-        }
-
-        .btn-select-all {
-          background: var(--gray-200);
-          color: var(--primary);
-        }
-
-        .btn-select-all:hover {
-          background: var(--gray-300);
-        }
-
-        .empty-state {
-          text-align: center;
-          padding: 80px 20px;
-          color: var(--gray-500);
-        }
-
-        .empty-state i {
-          font-size: 64px;
-          margin-bottom: 20px;
-          opacity: 0.3;
-        }
-
-        .modal {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0,0,0,0.7);
-          z-index: 10000;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .modal-content {
-          background: var(--secondary);
-          border-radius: var(--radius-lg);
-          padding: 32px;
-          max-width: 500px;
-          width: 90%;
-          max-height: 90vh;
-          overflow-y: auto;
-        }
-
-        .modal-header {
-          font-size: 24px;
-          font-weight: 700;
-          margin-bottom: 24px;
-          color: var(--primary);
-        }
-
-        .upload-area {
-          border: 3px dashed var(--gray-300);
-          border-radius: var(--radius);
-          padding: 40px;
-          text-align: center;
-          cursor: pointer;
-          transition: var(--transition);
-          margin-bottom: 20px;
-        }
-
-        .upload-area:hover {
-          border-color: var(--primary);
-          background: var(--gray-100);
-        }
-
-        .upload-area i {
-          font-size: 48px;
-          color: var(--gray-400);
-          margin-bottom: 16px;
-        }
-
-        .form-group {
-          margin-bottom: 20px;
-        }
-
-        .form-label {
-          display: block;
-          font-weight: 600;
-          margin-bottom: 8px;
-          color: var(--primary);
-        }
-
-        .form-input {
-          width: 100%;
-          padding: 12px;
-          border: 2px solid var(--gray-300);
-          border-radius: var(--radius);
-          font-family: inherit;
-        }
-
-        .form-input:focus {
-          outline: none;
-          border-color: var(--primary);
-        }
-
-        textarea.form-input {
-          resize: vertical;
-          min-height: 80px;
-        }
-
-        .modal-actions {
-          display: flex;
-          gap: 12px;
-          justify-content: flex-end;
-          margin-top: 24px;
-        }
-
-        .loading {
-          text-align: center;
-          padding: 40px;
-          color: var(--gray-500);
-          grid-column: 1 / -1;
-        }
-      `}</style>
     </AppLayout>
   );
 }

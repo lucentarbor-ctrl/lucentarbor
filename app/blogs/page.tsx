@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import AppLayout from '@/components/AppLayout';
+import PageHeader from '@/components/PageHeader';
 
 interface Blog {
   id: number;
@@ -67,7 +68,8 @@ export default function WordPressPage() {
   async function loadWordPressBlogs() {
     try {
       const response = await fetch('/api/blogs');
-      const blogs = await response.json();
+      const result = await response.json();
+      const blogs = result.data || [];
       const wpBlogs = blogs.filter((b: Blog) => b.platform === 'wordpress' && b.is_active);
       setAllBlogs(wpBlogs);
     } catch (error) {
@@ -79,10 +81,12 @@ export default function WordPressPage() {
   async function loadPosts() {
     try {
       const response = await fetch('/api/posts');
-      const posts = await response.json();
+      const result = await response.json();
+      const posts = result.data || [];
       setAllPosts(posts);
     } catch (error) {
       console.error('Error loading posts:', error);
+      setAllPosts([]);
     }
   }
 
@@ -204,172 +208,498 @@ export default function WordPressPage() {
   const totalBlogs = allBlogs.length;
   const totalPosts = allPosts.length;
 
+  const breadcrumbs = [
+    { label: 'Home', href: '/' },
+    { label: 'WordPress', href: '/blogs' }
+  ];
+
   return (
     <AppLayout>
-        <div className="wordpress-container">
-          {/* Header */}
-          <div className="wordpress-header">
-            <h1>
-              <i className="fab fa-wordpress"></i>
-              WordPress 발행 관리
-            </h1>
-            <p>등록된 WordPress 블로그에 글을 발행하고 관리하세요</p>
-          </div>
+      <PageHeader
+        title="WordPress 발행 관리"
+        breadcrumbs={breadcrumbs}
+      />
 
-          {/* Stats */}
-          <div className="wp-stats">
-            <div className="wp-stat-card">
-              <h3>등록된 블로그</h3>
-              <div className="value">{totalBlogs}</div>
-            </div>
-            <div className="wp-stat-card">
-              <h3>발행 가능한 글</h3>
-              <div className="value">{totalPosts}</div>
-            </div>
-            <div className="wp-stat-card">
-              <h3>총 발행 횟수</h3>
-              <div className="value">0</div>
-            </div>
-            <div className="wp-stat-card">
-              <h3>발행 성공률</h3>
-              <div className="value">100%</div>
-            </div>
-          </div>
-
-          {/* WordPress Blogs Section */}
-          <div className="wp-blogs-section">
-            <h2>
-              <i className="fab fa-wordpress"></i>
-              등록된 WordPress 블로그
-            </h2>
-            <div id="wp-blogs-list">
-              {allBlogs.length === 0 ? (
-                <div className="empty-state">
-                  <i className="fab fa-wordpress"></i>
-                  <h3>등록된 WordPress 블로그가 없습니다</h3>
-                  <p>설정 페이지에서 WordPress 블로그를 추가해주세요</p>
-                  <Link href="/settings" className="wp-btn wp-btn-primary" style={{ marginTop: '16px', display: 'inline-block' }}>
-                    <i className="fas fa-cog"></i> 설정으로 이동
-                  </Link>
-                </div>
-              ) : (
-                allBlogs.map(blog => (
-                  <div key={blog.id} className="wp-blog-card">
-                    <div className="wp-blog-info">
-                      <h3>{blog.name}</h3>
-                      <p><i className="fas fa-link"></i> {blog.url || '미설정'}</p>
-                    </div>
-                    <div className="wp-blog-actions">
-                      <button className="wp-btn wp-btn-secondary" onClick={() => testConnection(blog.id)}>
-                        <i className="fas fa-check-circle"></i> 연결 테스트
-                      </button>
-                      <button className="wp-btn wp-btn-secondary" onClick={() => syncCategories(blog.id)}>
-                        <i className="fas fa-sync"></i> 카테고리 동기화
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Posts Section */}
-          <div className="wp-blogs-section">
-            <h2>
-              <i className="fas fa-file-alt"></i>
-              발행 가능한 글
-            </h2>
-
-            <div className="filter-bar">
-              <select
-                className="filter-select"
-                value={blogFilter}
-                onChange={(e) => setBlogFilter(e.target.value)}
-              >
-                <option value="">모든 블로그</option>
-                {allBlogs.map(blog => (
-                  <option key={blog.id} value={blog.id}>{blog.name}</option>
-                ))}
-              </select>
-              <select
-                className="filter-select"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <option value="">모든 상태</option>
-                <option value="draft">초안</option>
-                <option value="published">발행됨</option>
-              </select>
-              <input
-                type="text"
-                className="search-box"
-                placeholder="글 제목 검색..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-
-            <div className="posts-grid">
-              {filteredPosts.length === 0 ? (
-                <div className="empty-state">
-                  <i className="fas fa-file-alt"></i>
-                  <h3>발행 가능한 글이 없습니다</h3>
-                  <p>에디터에서 새로운 글을 작성해보세요</p>
-                  <Link href="/editor" className="wp-btn wp-btn-primary" style={{ marginTop: '16px', display: 'inline-block' }}>
-                    <i className="fas fa-pen"></i> 글 작성하기
-                  </Link>
-                </div>
-              ) : (
-                filteredPosts.map(post => {
-                  const preview = post.content ? post.content.replace(/<[^>]*>/g, '').substring(0, 150) + '...' : '';
-                  const statusClass = post.status === 'published' ? 'status-published' : 'status-draft';
-
-                  return (
-                    <div key={post.id} className="post-card">
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
-                        <h3>{post.title}</h3>
-                        <span className={`publish-status ${statusClass}`}>
-                          {post.status === 'published' ? '발행됨' : '초안'}
-                        </span>
-                      </div>
-                      <div className="post-meta">
-                        <span><i className="fas fa-folder"></i> {post.category || '미분류'}</span>
-                        <span><i className="fas fa-calendar"></i> {new Date(post.created_at).toLocaleDateString('ko-KR')}</span>
-                        <span><i className="fas fa-eye"></i> {post.views || 0}</span>
-                      </div>
-                      <div className="post-content-preview">{preview}</div>
-                      <div className="post-actions">
-                        <button className="wp-btn wp-btn-primary" onClick={() => openPublishModal(post.id)}>
-                          <i className="fab fa-wordpress"></i> WordPress 발행
-                        </button>
-                        <button className="wp-btn wp-btn-secondary" onClick={() => viewPost(post.id)}>
-                          <i className="fas fa-eye"></i> 미리보기
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
+      {/* Stats Cards */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+        gap: '20px',
+        marginBottom: '32px'
+      }}>
+        <div style={{
+          background: 'white',
+          border: '2px solid #e5e7eb',
+          borderRadius: '12px',
+          padding: '24px',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
+        }}>
+          <h3 style={{
+            fontSize: '14px',
+            color: '#6b7280',
+            marginBottom: '8px',
+            fontWeight: '500'
+          }}>
+            등록된 블로그
+          </h3>
+          <div style={{
+            fontSize: '28px',
+            fontWeight: '700',
+            color: '#21759b'
+          }}>
+            {totalBlogs}
           </div>
         </div>
 
+        <div style={{
+          background: 'white',
+          border: '2px solid #e5e7eb',
+          borderRadius: '12px',
+          padding: '24px',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
+        }}>
+          <h3 style={{
+            fontSize: '14px',
+            color: '#6b7280',
+            marginBottom: '8px',
+            fontWeight: '500'
+          }}>
+            발행 가능한 글
+          </h3>
+          <div style={{
+            fontSize: '28px',
+            fontWeight: '700',
+            color: '#21759b'
+          }}>
+            {totalPosts}
+          </div>
+        </div>
+
+        <div style={{
+          background: 'white',
+          border: '2px solid #e5e7eb',
+          borderRadius: '12px',
+          padding: '24px',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
+        }}>
+          <h3 style={{
+            fontSize: '14px',
+            color: '#6b7280',
+            marginBottom: '8px',
+            fontWeight: '500'
+          }}>
+            총 발행 횟수
+          </h3>
+          <div style={{
+            fontSize: '28px',
+            fontWeight: '700',
+            color: '#21759b'
+          }}>
+            0
+          </div>
+        </div>
+
+        <div style={{
+          background: 'white',
+          border: '2px solid #e5e7eb',
+          borderRadius: '12px',
+          padding: '24px',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
+        }}>
+          <h3 style={{
+            fontSize: '14px',
+            color: '#6b7280',
+            marginBottom: '8px',
+            fontWeight: '500'
+          }}>
+            발행 성공률
+          </h3>
+          <div style={{
+            fontSize: '28px',
+            fontWeight: '700',
+            color: '#21759b'
+          }}>
+            100%
+          </div>
+        </div>
+      </div>
+
+      {/* WordPress Blogs Section */}
+      <div style={{
+        background: 'white',
+        border: '2px solid #e5e7eb',
+        borderRadius: '12px',
+        padding: '32px',
+        marginBottom: '32px',
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
+      }}>
+        <h2 style={{
+          fontSize: '24px',
+          fontWeight: '700',
+          color: '#111827',
+          marginBottom: '24px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px'
+        }}>
+          <i className="fab fa-wordpress"></i>
+          등록된 WordPress 블로그
+        </h2>
+
+        {allBlogs.length === 0 ? (
+          <div style={{
+            textAlign: 'center',
+            padding: '60px 20px',
+            color: '#6b7280'
+          }}>
+            <i className="fab fa-wordpress" style={{
+              fontSize: '64px',
+              opacity: 0.3,
+              marginBottom: '16px',
+              display: 'block'
+            }}></i>
+            <h3 style={{
+              fontSize: '20px',
+              fontWeight: '600',
+              color: '#1f2937',
+              marginBottom: '8px'
+            }}>
+              등록된 WordPress 블로그가 없습니다
+            </h3>
+            <p>설정 페이지에서 WordPress 블로그를 추가해주세요</p>
+            <Link
+              href="/settings"
+              style={{
+                marginTop: '16px',
+                display: 'inline-block',
+                padding: '10px 20px',
+                background: '#21759b',
+                color: 'white',
+                borderRadius: '8px',
+                textDecoration: 'none',
+                fontWeight: '500'
+              }}
+            >
+              <i className="fas fa-cog"></i> 설정으로 이동
+            </Link>
+          </div>
+        ) : (
+          allBlogs.map(blog => (
+            <div key={blog.id} style={{
+              background: '#f9fafb',
+              border: '2px solid #e5e7eb',
+              borderRadius: '12px',
+              padding: '20px',
+              marginBottom: '16px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              transition: 'all 0.3s ease'
+            }}>
+              <div>
+                <h3 style={{
+                  fontSize: '18px',
+                  fontWeight: '600',
+                  color: '#111827',
+                  marginBottom: '6px'
+                }}>
+                  {blog.name}
+                </h3>
+                <p style={{
+                  fontSize: '14px',
+                  color: '#6b7280'
+                }}>
+                  <i className="fas fa-link"></i> {blog.url || '미설정'}
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  onClick={() => testConnection(blog.id)}
+                  style={{
+                    padding: '10px 20px',
+                    background: '#e5e7eb',
+                    color: '#1f2937',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s'
+                  }}
+                >
+                  <i className="fas fa-check-circle"></i> 연결 테스트
+                </button>
+                <button
+                  onClick={() => syncCategories(blog.id)}
+                  style={{
+                    padding: '10px 20px',
+                    background: '#e5e7eb',
+                    color: '#1f2937',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s'
+                  }}
+                >
+                  <i className="fas fa-sync"></i> 카테고리 동기화
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Posts Section */}
+      <div style={{
+        background: 'white',
+        border: '2px solid #e5e7eb',
+        borderRadius: '12px',
+        padding: '32px',
+        marginBottom: '32px',
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
+      }}>
+        <h2 style={{
+          fontSize: '24px',
+          fontWeight: '700',
+          color: '#111827',
+          marginBottom: '24px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px'
+        }}>
+          <i className="fas fa-file-alt"></i>
+          발행 가능한 글
+        </h2>
+
+        <div style={{
+          display: 'flex',
+          gap: '12px',
+          marginBottom: '24px',
+          alignItems: 'center'
+        }}>
+          <select
+            value={blogFilter}
+            onChange={(e) => setBlogFilter(e.target.value)}
+            style={{
+              padding: '10px 16px',
+              border: '2px solid #d1d5db',
+              borderRadius: '8px',
+              fontSize: '14px',
+              background: 'white',
+              color: '#111827',
+              cursor: 'pointer'
+            }}
+          >
+            <option value="">모든 블로그</option>
+            {allBlogs.map(blog => (
+              <option key={blog.id} value={blog.id}>{blog.name}</option>
+            ))}
+          </select>
+
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            style={{
+              padding: '10px 16px',
+              border: '2px solid #d1d5db',
+              borderRadius: '8px',
+              fontSize: '14px',
+              background: 'white',
+              color: '#111827',
+              cursor: 'pointer'
+            }}
+          >
+            <option value="">모든 상태</option>
+            <option value="draft">초안</option>
+            <option value="published">발행됨</option>
+          </select>
+
+          <input
+            type="text"
+            placeholder="글 제목 검색..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              flex: 1,
+              padding: '10px 16px',
+              border: '2px solid #d1d5db',
+              borderRadius: '8px',
+              fontSize: '14px',
+              background: 'white',
+              color: '#111827'
+            }}
+          />
+        </div>
+
+        <div style={{
+          display: 'grid',
+          gap: '20px'
+        }}>
+          {filteredPosts.length === 0 ? (
+            <div style={{
+              textAlign: 'center',
+              padding: '60px 20px',
+              color: '#6b7280'
+            }}>
+              <i className="fas fa-file-alt" style={{
+                fontSize: '64px',
+                opacity: 0.3,
+                marginBottom: '16px',
+                display: 'block'
+              }}></i>
+              <h3 style={{
+                fontSize: '20px',
+                fontWeight: '600',
+                color: '#1f2937',
+                marginBottom: '8px'
+              }}>
+                발행 가능한 글이 없습니다
+              </h3>
+              <p>에디터에서 새로운 글을 작성해보세요</p>
+              <Link
+                href="/editor"
+                style={{
+                  marginTop: '16px',
+                  display: 'inline-block',
+                  padding: '10px 20px',
+                  background: '#21759b',
+                  color: 'white',
+                  borderRadius: '8px',
+                  textDecoration: 'none',
+                  fontWeight: '500'
+                }}
+              >
+                <i className="fas fa-pen"></i> 글 작성하기
+              </Link>
+            </div>
+          ) : (
+            filteredPosts.map(post => {
+              const preview = post.content ? post.content.replace(/<[^>]*>/g, '').substring(0, 150) + '...' : '';
+              const statusStyle = post.status === 'published'
+                ? { background: '#e8f5e9', color: '#2e7d32' }
+                : { background: '#fff3e0', color: '#ef6c00' };
+
+              return (
+                <div key={post.id} style={{
+                  background: 'white',
+                  border: '2px solid #d1d5db',
+                  borderRadius: '12px',
+                  padding: '24px',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+                  transition: 'all 0.3s'
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'start',
+                    marginBottom: '12px'
+                  }}>
+                    <h3 style={{
+                      fontSize: '20px',
+                      fontWeight: '600',
+                      color: '#111827',
+                      margin: 0
+                    }}>
+                      {post.title}
+                    </h3>
+                    <span style={{
+                      display: 'inline-block',
+                      padding: '4px 12px',
+                      borderRadius: '12px',
+                      fontSize: '12px',
+                      fontWeight: '500',
+                      ...statusStyle
+                    }}>
+                      {post.status === 'published' ? '발행됨' : '초안'}
+                    </span>
+                  </div>
+
+                  <div style={{
+                    display: 'flex',
+                    gap: '16px',
+                    marginBottom: '16px',
+                    fontSize: '13px',
+                    color: '#6b7280'
+                  }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <i className="fas fa-folder"></i> {post.category || '미분류'}
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <i className="fas fa-calendar"></i> {new Date(post.created_at).toLocaleDateString('ko-KR')}
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <i className="fas fa-eye"></i> {post.views || 0}
+                    </span>
+                  </div>
+
+                  <div style={{
+                    fontSize: '14px',
+                    color: '#6b7280',
+                    lineHeight: '1.6',
+                    marginBottom: '16px',
+                    maxHeight: '60px',
+                    overflow: 'hidden'
+                  }}>
+                    {preview}
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button
+                      onClick={() => openPublishModal(post.id)}
+                      style={{
+                        padding: '10px 20px',
+                        background: '#21759b',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                        transition: 'all 0.3s'
+                      }}
+                    >
+                      <i className="fab fa-wordpress"></i> WordPress 발행
+                    </button>
+                    <button
+                      onClick={() => viewPost(post.id)}
+                      style={{
+                        padding: '10px 20px',
+                        background: '#e5e7eb',
+                        color: '#1f2937',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                        transition: 'all 0.3s'
+                      }}
+                    >
+                      <i className="fas fa-eye"></i> 미리보기
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
       {/* Publish Modal */}
       {showModal && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 10000
-          }}
-        >
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          background: 'rgba(0,0,0,0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000
+        }}>
           <div style={{
             background: 'white',
             borderRadius: '16px',
@@ -377,14 +707,32 @@ export default function WordPressPage() {
             maxWidth: '500px',
             width: '90%'
           }}>
-            <h2 style={{ marginBottom: '24px', fontSize: '24px', color: '#000' }}>WordPress 발행</h2>
+            <h2 style={{
+              marginBottom: '24px',
+              fontSize: '24px',
+              color: '#111827'
+            }}>
+              WordPress 발행
+            </h2>
 
             <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>블로그 선택</label>
+              <label style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontWeight: 500,
+                color: '#374151'
+              }}>
+                블로그 선택
+              </label>
               <select
                 value={modalBlogId}
                 onChange={(e) => setModalBlogId(e.target.value)}
-                style={{ width: '100%', padding: '10px', border: '2px solid #e0e0e0', borderRadius: '8px' }}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '2px solid #d1d5db',
+                  borderRadius: '8px'
+                }}
               >
                 {allBlogs.map(blog => (
                   <option key={blog.id} value={blog.id}>{blog.name}</option>
@@ -393,11 +741,23 @@ export default function WordPressPage() {
             </div>
 
             <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>발행 상태</label>
+              <label style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontWeight: 500,
+                color: '#374151'
+              }}>
+                발행 상태
+              </label>
               <select
                 value={modalStatus}
                 onChange={(e) => setModalStatus(e.target.value)}
-                style={{ width: '100%', padding: '10px', border: '2px solid #e0e0e0', borderRadius: '8px' }}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '2px solid #d1d5db',
+                  borderRadius: '8px'
+                }}
               >
                 <option value="publish">즉시 발행</option>
                 <option value="draft">초안으로 저장</option>
@@ -405,7 +765,12 @@ export default function WordPressPage() {
             </div>
 
             <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+              <label style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer'
+              }}>
                 <input
                   type="checkbox"
                   checked={modalAdsense}
@@ -450,271 +815,6 @@ export default function WordPressPage() {
           </div>
         </div>
       )}
-
-      <style jsx>{`
-        .wordpress-container {
-          padding: 40px;
-        }
-
-        .wordpress-header {
-          background: linear-gradient(135deg, #21759b 0%, #1e6a8d 100%);
-          border-radius: var(--radius-lg);
-          padding: 40px;
-          margin-bottom: 32px;
-          box-shadow: var(--shadow-md);
-          color: white;
-        }
-
-        .wordpress-header h1 {
-          font-size: 36px;
-          font-weight: 700;
-          margin-bottom: 12px;
-          display: flex;
-          align-items: center;
-          gap: 16px;
-        }
-
-        .wordpress-header p {
-          font-size: 16px;
-          opacity: 0.9;
-        }
-
-        .wp-stats {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-          gap: 20px;
-          margin-bottom: 32px;
-        }
-
-        .wp-stat-card {
-          background: var(--secondary);
-          border: 2px solid var(--gray-300);
-          border-radius: var(--radius);
-          padding: 24px;
-          box-shadow: var(--shadow-sm);
-        }
-
-        .wp-stat-card h3 {
-          font-size: 14px;
-          color: var(--gray-600);
-          margin-bottom: 8px;
-          font-weight: 500;
-        }
-
-        .wp-stat-card .value {
-          font-size: 28px;
-          font-weight: 700;
-          color: #21759b;
-        }
-
-        .wp-blogs-section {
-          background: var(--secondary);
-          border: 2px solid var(--gray-300);
-          border-radius: var(--radius-lg);
-          padding: 32px;
-          margin-bottom: 32px;
-          box-shadow: var(--shadow-sm);
-        }
-
-        .wp-blogs-section h2 {
-          font-size: 24px;
-          font-weight: 700;
-          color: var(--primary);
-          margin-bottom: 24px;
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        }
-
-        .wp-blog-card {
-          background: var(--gray-50);
-          border: 2px solid var(--gray-200);
-          border-radius: var(--radius);
-          padding: 20px;
-          margin-bottom: 16px;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          transition: var(--transition);
-        }
-
-        .wp-blog-card:hover {
-          box-shadow: var(--shadow-md);
-          transform: translateY(-2px);
-        }
-
-        .wp-blog-info h3 {
-          font-size: 18px;
-          font-weight: 600;
-          color: var(--primary);
-          margin-bottom: 6px;
-        }
-
-        .wp-blog-info p {
-          font-size: 14px;
-          color: var(--gray-600);
-        }
-
-        .wp-blog-actions {
-          display: flex;
-          gap: 10px;
-        }
-
-        .wp-btn {
-          padding: 10px 20px;
-          border: none;
-          border-radius: 8px;
-          font-size: 14px;
-          font-weight: 500;
-          cursor: pointer;
-          transition: var(--transition);
-        }
-
-        .wp-btn-primary {
-          background: #21759b;
-          color: white;
-        }
-
-        .wp-btn-primary:hover {
-          background: #1e6a8d;
-        }
-
-        .wp-btn-secondary {
-          background: var(--gray-200);
-          color: var(--gray-800);
-        }
-
-        .wp-btn-secondary:hover {
-          background: var(--gray-300);
-        }
-
-        .posts-grid {
-          display: grid;
-          gap: 20px;
-        }
-
-        .post-card {
-          background: var(--secondary);
-          border: 2px solid var(--gray-300);
-          border-radius: var(--radius);
-          padding: 24px;
-          box-shadow: var(--shadow-sm);
-          transition: var(--transition);
-        }
-
-        .post-card:hover {
-          box-shadow: var(--shadow-md);
-          transform: translateY(-2px);
-        }
-
-        .post-card h3 {
-          font-size: 20px;
-          font-weight: 600;
-          color: var(--primary);
-          margin-bottom: 12px;
-        }
-
-        .post-meta {
-          display: flex;
-          gap: 16px;
-          margin-bottom: 16px;
-          font-size: 13px;
-          color: var(--gray-600);
-        }
-
-        .post-meta span {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-        }
-
-        .post-content-preview {
-          font-size: 14px;
-          color: var(--gray-600);
-          line-height: 1.6;
-          margin-bottom: 16px;
-          max-height: 60px;
-          overflow: hidden;
-        }
-
-        .post-actions {
-          display: flex;
-          gap: 10px;
-        }
-
-        .publish-status {
-          display: inline-block;
-          padding: 4px 12px;
-          border-radius: 12px;
-          font-size: 12px;
-          font-weight: 500;
-        }
-
-        .status-published {
-          background: #e8f5e9;
-          color: #2e7d32;
-        }
-
-        .status-draft {
-          background: #fff3e0;
-          color: #ef6c00;
-        }
-
-        .status-pending {
-          background: #e3f2fd;
-          color: #1976d2;
-        }
-
-        .empty-state {
-          text-align: center;
-          padding: 60px 20px;
-          color: var(--gray-600);
-        }
-
-        .empty-state i {
-          font-size: 64px;
-          opacity: 0.3;
-          margin-bottom: 16px;
-        }
-
-        .empty-state h3 {
-          font-size: 20px;
-          font-weight: 600;
-          color: var(--gray-800);
-          margin-bottom: 8px;
-        }
-
-        .filter-bar {
-          display: flex;
-          gap: 12px;
-          margin-bottom: 24px;
-          align-items: center;
-        }
-
-        .filter-select {
-          padding: 10px 16px;
-          border: 2px solid var(--gray-300);
-          border-radius: 8px;
-          font-size: 14px;
-          background: var(--secondary);
-          color: var(--primary);
-          cursor: pointer;
-        }
-
-        .search-box {
-          flex: 1;
-          padding: 10px 16px;
-          border: 2px solid var(--gray-300);
-          border-radius: 8px;
-          font-size: 14px;
-          background: var(--secondary);
-          color: var(--primary);
-        }
-
-        .main-content {
-          padding: 0;
-        }
-      `}</style>
     </AppLayout>
   );
 }

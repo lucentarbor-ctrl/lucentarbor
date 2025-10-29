@@ -1,40 +1,113 @@
 'use client';
 
-import Sidebar from './Sidebar';
-import { SidebarProvider, useSidebar } from '@/contexts/SidebarContext';
+import { useState, useEffect } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import PrimarySidebar from './PrimarySidebar';
+import SecondarySidebar from './SecondarySidebar';
+import { menuItems, MenuItem } from './PrimarySidebar';
 
 interface AppLayoutProps {
   children: React.ReactNode;
 }
 
-function AppLayoutContent({ children }: AppLayoutProps) {
-  const { sidebarWidth } = useSidebar();
+export default function AppLayout({ children }: AppLayoutProps) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [activeMenuItem, setActiveMenuItem] = useState<MenuItem | null>(null);
+  const [isSecondaryOpen, setIsSecondaryOpen] = useState(false);
+
+  // 현재 경로에 맞는 메뉴 자동 선택
+  useEffect(() => {
+    for (const item of menuItems) {
+      if (item.subItems) {
+        const matchingSubItem = item.subItems.find(sub => pathname === sub.href);
+        if (matchingSubItem) {
+          setActiveMenuId(item.id);
+          setActiveMenuItem(item);
+          setIsSecondaryOpen(true);
+          return;
+        }
+      } else {
+        // 단일 페이지 메뉴 매칭
+        const routes: Record<string, string> = {
+          'dashboard': '/dashboard',
+          'wordpress': '/blogs',
+          'settings': '/settings',
+        };
+        if (routes[item.id] === pathname || (item.id === 'dashboard' && pathname === '/')) {
+          setActiveMenuId(item.id);
+          setActiveMenuItem(null);
+          setIsSecondaryOpen(false);
+          return;
+        }
+      }
+    }
+  }, [pathname]);
+
+  const handleMenuClick = (menuId: string) => {
+    const menu = menuItems.find(item => item.id === menuId);
+    if (!menu) return;
+
+    if (activeMenuId === menuId && isSecondaryOpen) {
+      // 같은 메뉴 클릭 시 토글
+      setIsSecondaryOpen(false);
+    } else {
+      setActiveMenuId(menuId);
+      setActiveMenuItem(menu);
+
+      // 서브 아이템이 있으면 2차 사이드바 열기
+      if (menu.subItems) {
+        setIsSecondaryOpen(true);
+      } else {
+        setIsSecondaryOpen(false);
+
+        // 단일 페이지 메뉴는 바로 이동
+        const routes: Record<string, string> = {
+          'dashboard': '/dashboard',
+          'wordpress': '/blogs',
+          'settings': '/settings',
+        };
+
+        const targetRoute = routes[menuId];
+        if (targetRoute) {
+          router.push(targetRoute);
+        }
+      }
+    }
+  };
+
+  const handleSecondaryClose = () => {
+    setIsSecondaryOpen(false);
+  };
 
   return (
     <>
       <style jsx global>{`
         :root {
-          --primary: #2c3e50;
+          --primary: #3b82f6;
+          --primary-dark: #2563eb;
           --secondary: #ffffff;
-          --success: #27ae60;
-          --warning: #f39c12;
-          --danger: #e74c3c;
-          --info: #3498db;
-          --gray-100: #f8f9fa;
-          --gray-200: #e9ecef;
-          --gray-300: #dee2e6;
-          --gray-400: #ced4da;
-          --gray-500: #adb5bd;
-          --gray-600: #6c757d;
-          --gray-700: #495057;
-          --gray-800: #343a40;
-          --gray-900: #212529;
+          --success: #10b981;
+          --warning: #f59e0b;
+          --danger: #ef4444;
+          --info: #3b82f6;
+          --gray-50: #f9fafb;
+          --gray-100: #f3f4f6;
+          --gray-200: #e5e7eb;
+          --gray-300: #d1d5db;
+          --gray-400: #9ca3af;
+          --gray-500: #6b7280;
+          --gray-600: #4b5563;
+          --gray-700: #374151;
+          --gray-800: #1f2937;
+          --gray-900: #111827;
           --radius: 8px;
           --radius-lg: 12px;
-          --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
-          --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.12);
-          --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.15);
-          --transition: all 0.3s ease;
+          --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+          --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+          --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+          --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         * {
@@ -45,29 +118,58 @@ function AppLayoutContent({ children }: AppLayoutProps) {
 
         body {
           font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
-          background: #e5e7eb;
+          background: #111827;
           color: var(--gray-900);
           line-height: 1.6;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+          overflow: hidden;
         }
 
         .app-layout {
           display: flex;
-          min-height: calc(100vh - 32px);
-          margin: 16px;
+          min-height: 100vh;
+          height: 100vh;
           background: #ffffff;
-          border-radius: 24px;
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
           overflow: hidden;
-          border: 1px solid rgba(0, 0, 0, 0.05);
         }
 
         .main-content {
           flex: 1;
-          min-height: calc(100vh - 32px);
-          background: #f9fafb;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          padding: 24px;
+          height: 100vh;
+          background: #f3f4f6;
+          transition: var(--transition);
+          padding: 32px;
           overflow-y: auto;
+        }
+
+        .main-content::-webkit-scrollbar {
+          width: 8px;
+        }
+
+        .main-content::-webkit-scrollbar-track {
+          background: #f3f4f6;
+        }
+
+        .main-content::-webkit-scrollbar-thumb {
+          background: #d1d5db;
+          border-radius: 4px;
+        }
+
+        .main-content::-webkit-scrollbar-thumb:hover {
+          background: #9ca3af;
+        }
+
+        @media (max-width: 768px) {
+          .app-layout {
+            min-height: 100vh;
+            height: 100vh;
+          }
+
+          .main-content {
+            height: 100vh;
+            padding: 20px;
+          }
         }
       `}</style>
 
@@ -81,17 +183,17 @@ function AppLayoutContent({ children }: AppLayoutProps) {
       />
 
       <div className="app-layout">
-        <Sidebar />
+        <PrimarySidebar
+          activeMenu={activeMenuId}
+          onMenuClick={handleMenuClick}
+        />
+        <SecondarySidebar
+          isOpen={isSecondaryOpen}
+          activeMenuItem={activeMenuItem}
+          onClose={handleSecondaryClose}
+        />
         <div className="main-content">{children}</div>
       </div>
     </>
-  );
-}
-
-export default function AppLayout({ children }: AppLayoutProps) {
-  return (
-    <SidebarProvider>
-      <AppLayoutContent>{children}</AppLayoutContent>
-    </SidebarProvider>
   );
 }
