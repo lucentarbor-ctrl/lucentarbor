@@ -7,6 +7,8 @@ import PageHeader from '@/components/PageHeader';
 import StatCard from '@/components/common/StatCard';
 import ChartCard from '@/components/common/ChartCard';
 import DataTable from '@/components/common/DataTable';
+import LoadingSpinner from '@/components/LoadingSpinner';
+import ErrorMessage from '@/components/ErrorMessage';
 
 interface DashboardStats {
   total_posts: number;
@@ -30,6 +32,7 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentPosts, setRecentPosts] = useState<RecentPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadDashboardData();
@@ -37,16 +40,31 @@ export default function DashboardPage() {
 
   const loadDashboardData = async () => {
     try {
+      setIsLoading(true);
+      setError(null);
+
       // Load stats
       const statsResponse = await fetch('/api/stats');
+
+      if (!statsResponse.ok) {
+        throw new Error('통계 데이터를 불러오는데 실패했습니다');
+      }
+
       const statsResult = await statsResponse.json();
 
       if (statsResult.status === 'success') {
         setStats(statsResult.data);
+      } else if (statsResult.status === 'error') {
+        throw new Error(statsResult.message || '통계 데이터 로드 실패');
       }
 
       // Load recent posts
-      const postsResponse = await fetch('/api/posts');
+      const postsResponse = await fetch('/api/posts?limit=5');
+
+      if (!postsResponse.ok) {
+        throw new Error('포스트 데이터를 불러오는데 실패했습니다');
+      }
+
       const postsResult = await postsResponse.json();
 
       if (postsResult.status === 'success') {
@@ -56,9 +74,12 @@ export default function DashboardPage() {
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         ).slice(0, 5);
         setRecentPosts(sorted);
+      } else if (postsResult.status === 'error') {
+        throw new Error(postsResult.message || '포스트 데이터 로드 실패');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Dashboard data load error:', error);
+      setError(error.message || '데이터를 불러오는 중 오류가 발생했습니다');
     } finally {
       setIsLoading(false);
     }
@@ -163,6 +184,31 @@ export default function DashboardPage() {
       },
     ],
   };
+
+  // 로딩 상태
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <LoadingSpinner
+          size="lg"
+          message="대시보드 데이터를 불러오는 중..."
+        />
+      </AppLayout>
+    );
+  }
+
+  // 에러 상태
+  if (error) {
+    return (
+      <AppLayout>
+        <ErrorMessage
+          title="대시보드 로드 실패"
+          message={error}
+          onRetry={loadDashboardData}
+        />
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>

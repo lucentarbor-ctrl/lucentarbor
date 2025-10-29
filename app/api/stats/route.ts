@@ -3,6 +3,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { successResponse, handleDatabaseError, serverError } from '@/lib/api-response';
 
 export async function GET() {
   try {
@@ -16,18 +17,23 @@ export async function GET() {
 
     const avgViews = totalPosts > 0 ? Math.round((totalViews._sum.views || 0) / totalPosts) : 0;
 
-    return NextResponse.json({
-      status: 'success',
-      data: {
-        total_posts: totalPosts,
-        published_posts: publishedPosts,
-        draft_posts: draftPosts,
-        total_views: totalViews._sum.views || 0,
-        avg_views_per_post: avgViews,
-        active_blogs: totalBlogs,
-      },
+    return successResponse({
+      total_posts: totalPosts,
+      published_posts: publishedPosts,
+      draft_posts: draftPosts,
+      total_views: totalViews._sum.views || 0,
+      avg_views_per_post: avgViews,
+      active_blogs: totalBlogs,
+    }, {
+      message: 'Statistics fetched successfully',
     });
   } catch (error: any) {
-    return NextResponse.json({ error: 'Failed to fetch stats', message: error.message }, { status: 500 });
+    // Prisma 에러인 경우
+    if (error.code) {
+      return handleDatabaseError(error);
+    }
+
+    // 일반 서버 에러
+    return serverError(error, 'Failed to fetch statistics');
   }
 }
