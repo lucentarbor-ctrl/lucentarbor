@@ -222,7 +222,8 @@ export default function PrimarySidebar({ activeMenu, onMenuClick, collapsed, onT
           display: flex;
           align-items: center;
           gap: 12px;
-          width: 100%;
+          width: ${collapsed ? 'auto' : '100%'};
+          justify-content: ${collapsed ? 'center' : 'flex-start'};
         }
       `}</style>
 
