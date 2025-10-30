@@ -145,11 +145,32 @@ const EditorPage: React.FC = () => {
         });
 
         const data = await response.json();
-        const content = data.generated_text || data.content || '';
+        const fullContent = data.generated_text || data.content || '';
+
+        // AI 응답에서 제목 추출
+        let extractedTitle = topicInput; // 기본값: 사용자가 입력한 주제
+        let extractedContent = fullContent;
+
+        // "## 제목" 패턴으로 제목 추출 시도
+        const titleMatch = fullContent.match(/##\s*제목\s*\n\s*(.+?)(?:\n|$)/i);
+        if (titleMatch && titleMatch[1]) {
+          extractedTitle = titleMatch[1].trim();
+          // 제목 섹션 제거
+          extractedContent = fullContent.replace(/##\s*제목\s*\n\s*.+?\n/i, '');
+        } else {
+          // "## " 뒤의 첫 번째 줄을 제목으로 시도
+          const h2Match = fullContent.match(/##\s*(.+?)(?:\n|$)/);
+          if (h2Match && h2Match[1] && !h2Match[1].includes('본문')) {
+            extractedTitle = h2Match[1].trim();
+          }
+        }
+
+        // "## 본문" 섹션 제거
+        extractedContent = extractedContent.replace(/##\s*본문\s*\n/i, '');
 
         results[model] = {
-          title: topicInput,
-          content: content,
+          title: extractedTitle,
+          content: extractedContent,
           source: '사용자 입력',
           model: model,
           loading: false
