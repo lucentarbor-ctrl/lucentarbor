@@ -18,6 +18,8 @@ interface SubMenuItem {
 interface PrimarySidebarProps {
   activeMenu: string | null;
   onMenuClick: (menuId: string) => void;
+  collapsed: boolean;
+  onToggleCollapse: () => void;
 }
 
 const menuItems: MenuItem[] = [
@@ -27,16 +29,18 @@ const menuItems: MenuItem[] = [
     icon: 'far fa-folder',
     label: '콘텐츠',
     subItems: [
-      { href: '/editor', icon: 'far fa-edit', label: '에디터' },
-      { href: '/posts', icon: 'far fa-file-alt', label: '내 글' },
-      { href: '/media', icon: 'far fa-images', label: '미디어' },
+      { href: '/editor', icon: 'far fa-edit', label: '글쓰기' },
+      { href: '/news-crawler', icon: 'fas fa-newspaper', label: '뉴스크롤링' },
+      { href: '/course-creator', icon: 'fas fa-graduation-cap', label: '강좌제작' },
     ]
   },
+  { id: 'posts', icon: 'far fa-file-alt', label: '내 글' },
+  { id: 'media', icon: 'far fa-images', label: '미디어' },
   { id: 'wordpress', icon: 'fas fa-blog', label: 'WordPress' },
   { id: 'settings', icon: 'fas fa-cog', label: '설정' },
 ];
 
-export default function PrimarySidebar({ activeMenu, onMenuClick }: PrimarySidebarProps) {
+export default function PrimarySidebar({ activeMenu, onMenuClick, collapsed, onToggleCollapse }: PrimarySidebarProps) {
   const pathname = usePathname();
 
   const isActive = (item: MenuItem) => {
@@ -51,13 +55,14 @@ export default function PrimarySidebar({ activeMenu, onMenuClick }: PrimarySideb
     <>
       <style jsx>{`
         .primary-sidebar {
-          width: 72px;
+          width: ${collapsed ? '72px' : '220px'};
           background: #ffffff;
           display: flex;
           flex-direction: column;
           height: 100vh;
           position: relative;
           z-index: 1000;
+          transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .sidebar-header {
@@ -180,6 +185,43 @@ export default function PrimarySidebar({ activeMenu, onMenuClick }: PrimarySideb
           transform: scale(1.1);
           box-shadow: 0 6px 16px rgba(59, 130, 246, 0.5), inset 0 -2px 4px rgba(0, 0, 0, 0.2);
         }
+
+        .toggle-btn {
+          width: 40px;
+          height: 40px;
+          border: none;
+          background: #f3f4f6;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #6b7280;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          margin: 0 auto;
+        }
+
+        .toggle-btn:hover {
+          background: #e5e7eb;
+          color: #111827;
+        }
+
+        .menu-label {
+          font-size: 14px;
+          font-weight: 500;
+          white-space: nowrap;
+          opacity: ${collapsed ? '0' : '1'};
+          width: ${collapsed ? '0' : 'auto'};
+          overflow: hidden;
+          transition: opacity 0.2s ease, width 0.3s ease;
+        }
+
+        .menu-item-content {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          width: 100%;
+        }
       `}</style>
 
       <div className="primary-sidebar">
@@ -196,14 +238,20 @@ export default function PrimarySidebar({ activeMenu, onMenuClick }: PrimarySideb
               className={`menu-item ${isActive(item) ? 'active' : ''}`}
               onClick={() => onMenuClick(item.id)}
             >
-              <i className={`${item.icon} menu-icon`}></i>
-              <span className="menu-tooltip">{item.label}</span>
+              <div className="menu-item-content">
+                <i className={`${item.icon} menu-icon`}></i>
+                {!collapsed && <span className="menu-label">{item.label}</span>}
+              </div>
+              {collapsed && <span className="menu-tooltip">{item.label}</span>}
             </div>
           ))}
         </nav>
 
         <div className="sidebar-footer">
-          <div className="user-avatar">
+          <button className="toggle-btn" onClick={onToggleCollapse} title={collapsed ? '사이드바 확장' : '사이드바 축소'}>
+            <i className={`fas fa-${collapsed ? 'angle-right' : 'angle-left'}`}></i>
+          </button>
+          <div className="user-avatar" style={{ marginTop: '12px' }}>
             <i className="fas fa-user"></i>
           </div>
         </div>

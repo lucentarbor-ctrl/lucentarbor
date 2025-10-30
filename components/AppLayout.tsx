@@ -16,6 +16,22 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [activeMenuItem, setActiveMenuItem] = useState<MenuItem | null>(null);
   const [isSecondaryOpen, setIsSecondaryOpen] = useState(false);
+  const [isPrimarySidebarCollapsed, setIsPrimarySidebarCollapsed] = useState(false);
+
+  // localStorage에서 사이드바 상태 로드
+  useEffect(() => {
+    const saved = localStorage.getItem('sidebarCollapsed');
+    if (saved !== null) {
+      setIsPrimarySidebarCollapsed(saved === 'true');
+    }
+  }, []);
+
+  // 사이드바 토글 함수
+  const togglePrimarySidebar = () => {
+    const newState = !isPrimarySidebarCollapsed;
+    setIsPrimarySidebarCollapsed(newState);
+    localStorage.setItem('sidebarCollapsed', newState.toString());
+  };
 
   // 현재 경로에 맞는 메뉴 자동 선택
   useEffect(() => {
@@ -32,6 +48,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
         // 단일 페이지 메뉴 매칭
         const routes: Record<string, string> = {
           'dashboard': '/dashboard',
+          'posts': '/posts',
+          'media': '/media',
           'wordpress': '/blogs',
           'settings': '/settings',
         };
@@ -65,6 +83,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
         // 단일 페이지 메뉴는 바로 이동
         const routes: Record<string, string> = {
           'dashboard': '/dashboard',
+          'posts': '/posts',
+          'media': '/media',
           'wordpress': '/blogs',
           'settings': '/settings',
         };
@@ -186,6 +206,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
         <PrimarySidebar
           activeMenu={activeMenuId}
           onMenuClick={handleMenuClick}
+          collapsed={isPrimarySidebarCollapsed}
+          onToggleCollapse={togglePrimarySidebar}
         />
         <SecondarySidebar
           isOpen={isSecondaryOpen}
