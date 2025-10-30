@@ -111,7 +111,8 @@ export default function PrimarySidebar({ activeMenu, onMenuClick, collapsed, onT
           margin: 0;
           display: flex;
           align-items: center;
-          justify-content: center;
+          justify-content: ${collapsed ? 'center' : 'flex-start'};
+          padding-left: ${collapsed ? '0' : '20px'};
           border-radius: 0;
           color: #6b7280;
           cursor: pointer;
@@ -135,6 +136,7 @@ export default function PrimarySidebar({ activeMenu, onMenuClick, collapsed, onT
 
         .menu-icon {
           font-size: 20px;
+          flex-shrink: 0;
         }
 
         .menu-tooltip {

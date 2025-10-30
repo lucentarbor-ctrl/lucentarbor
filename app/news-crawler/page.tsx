@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import AppLayout from '@/components/AppLayout';
 import PageHeader from '@/components/PageHeader';
 
 interface AIModel {
@@ -172,7 +173,7 @@ export default function NewsCrawlerPage() {
   };
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <AppLayout>
       <PageHeader
         title="뉴스 크롤링"
         breadcrumbs={[
@@ -538,6 +539,6 @@ export default function NewsCrawlerPage() {
           )}
         </div>
       </div>
-    </div>
+    </AppLayout>
   );
 }

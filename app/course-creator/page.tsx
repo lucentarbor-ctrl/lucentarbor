@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import AppLayout from '@/components/AppLayout';
 import PageHeader from '@/components/PageHeader';
 
 interface AIModel {
@@ -232,7 +233,7 @@ ${courseDescription ? `강좌 설명: ${courseDescription}` : ''}
   };
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <AppLayout>
       <PageHeader
         title="강좌 제작"
         breadcrumbs={[
@@ -809,6 +810,6 @@ ${courseDescription ? `강좌 설명: ${courseDescription}` : ''}
           )}
         </div>
       </div>
-    </div>
+    </AppLayout>
   );
 }
