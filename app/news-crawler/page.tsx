@@ -83,41 +83,30 @@ export default function NewsCrawlerPage() {
     setSearchResults([]);
 
     try {
-      // TODO: API 연동 - 실제 뉴스 검색 API 호출
-      // 임시 mock 데이터
-      const mockResults: NewsItem[] = [
-        {
-          id: '1',
-          title: `${keyword} 관련 최신 기술 동향`,
-          url: 'https://example.com/news1',
-          source: 'TechNews',
-          publishedDate: new Date().toISOString(),
-          summary: `${keyword}에 대한 최신 기술 동향을 분석한 기사입니다.`,
+      const response = await fetch('/api/news/search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        {
-          id: '2',
-          title: `${keyword} 산업의 미래 전망`,
-          url: 'https://example.com/news2',
-          source: 'BusinessDaily',
-          publishedDate: new Date().toISOString(),
-          summary: `${keyword} 산업이 어떻게 발전할 것인지 전문가들의 의견을 담았습니다.`,
-        },
-        {
-          id: '3',
-          title: `${keyword} 시장 분석 리포트`,
-          url: 'https://example.com/news3',
-          source: 'MarketWatch',
-          publishedDate: new Date().toISOString(),
-          summary: `${keyword} 시장의 현황과 향후 전망을 상세히 분석합니다.`,
-        },
-      ];
+        body: JSON.stringify({
+          keyword: keyword.trim(),
+          category: searchCategory,
+          limit: 20,
+        }),
+      });
 
-      setTimeout(() => {
-        setSearchResults(mockResults);
-        setIsSearching(false);
-      }, 1000);
+      const data = await response.json();
+
+      if (data.success && data.items) {
+        setSearchResults(data.items);
+      } else {
+        console.error('Search failed:', data.error);
+        alert('뉴스 검색에 실패했습니다: ' + (data.error || '알 수 없는 오류'));
+      }
     } catch (error) {
       console.error('Search error:', error);
+      alert('뉴스 검색 중 오류가 발생했습니다.');
+    } finally {
       setIsSearching(false);
     }
   };
@@ -144,35 +133,43 @@ export default function NewsCrawlerPage() {
     setIsFetchingRss(true);
 
     try {
-      // TODO: API 연동 - RSS 피드 파싱
-      // 임시 mock 데이터
-      const mockItems: NewsItem[] = rssFeeds
-        .filter(feed => feed.active)
-        .flatMap((feed, idx) => [
-          {
-            id: `${feed.id}-1`,
-            title: `${feed.name} - Latest Article ${idx + 1}`,
-            url: `${feed.url}/article-1`,
-            source: feed.name,
-            publishedDate: new Date().toISOString(),
-            summary: `Latest article from ${feed.name}`,
-          },
-          {
-            id: `${feed.id}-2`,
-            title: `${feed.name} - Breaking News ${idx + 1}`,
-            url: `${feed.url}/article-2`,
-            source: feed.name,
-            publishedDate: new Date().toISOString(),
-            summary: `Breaking news from ${feed.name}`,
-          },
-        ]);
+      const activeFeeds = rssFeeds.filter(feed => feed.active);
 
-      setTimeout(() => {
-        setRssFeedItems(mockItems);
+      if (activeFeeds.length === 0) {
+        alert('활성화된 RSS 피드가 없습니다.');
         setIsFetchingRss(false);
-      }, 1000);
+        return;
+      }
+
+      const response = await fetch('/api/news/rss', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          urls: activeFeeds.map(feed => feed.url),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.items) {
+        setRssFeedItems(data.items);
+
+        // Update feed item counts
+        const updatedFeeds = rssFeeds.map(feed => {
+          const feedData = data.feeds?.find((f: any) => f.url === feed.url);
+          return feedData ? { ...feed, itemCount: feedData.items?.length || 0 } : feed;
+        });
+        setRssFeeds(updatedFeeds);
+      } else {
+        console.error('RSS fetch failed:', data.error);
+        alert('RSS 피드를 불러오는데 실패했습니다: ' + (data.error || '알 수 없는 오류'));
+      }
     } catch (error) {
       console.error('RSS fetch error:', error);
+      alert('RSS 피드를 불러오는 중 오류가 발생했습니다.');
+    } finally {
       setIsFetchingRss(false);
     }
   };
@@ -182,24 +179,29 @@ export default function NewsCrawlerPage() {
     setIsFetchingTrending(true);
 
     try {
-      // TODO: API 연동 - 실시간 트렌딩 뉴스
-      // 임시 mock 데이터
-      const categories = ['tech', 'business', 'science', 'health'];
-      const mockTrending: NewsItem[] = categories.map((cat, idx) => ({
-        id: `trending-${idx}`,
-        title: `🔥 Trending in ${cat}: Latest developments`,
-        url: `https://example.com/trending/${cat}`,
-        source: 'TrendingNews',
-        publishedDate: new Date().toISOString(),
-        summary: `Currently trending in ${cat} category`,
-      }));
+      const response = await fetch('/api/news/trending', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          category: trendingCategory,
+          limit: 20,
+        }),
+      });
 
-      setTimeout(() => {
-        setTrendingNews(mockTrending);
-        setIsFetchingTrending(false);
-      }, 1000);
+      const data = await response.json();
+
+      if (data.success && data.items) {
+        setTrendingNews(data.items);
+      } else {
+        console.error('Trending fetch failed:', data.error);
+        alert('트렌딩 뉴스를 불러오는데 실패했습니다: ' + (data.error || '알 수 없는 오류'));
+      }
     } catch (error) {
       console.error('Trending fetch error:', error);
+      alert('트렌딩 뉴스를 불러오는 중 오류가 발생했습니다.');
+    } finally {
       setIsFetchingTrending(false);
     }
   };
@@ -215,18 +217,34 @@ export default function NewsCrawlerPage() {
     setIsComparing(true);
 
     try {
-      // TODO: API 연동 - 뉴스 비교 분석
-      setTimeout(() => {
+      const response = await fetch('/api/news/compare', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          urls: validUrls,
+          aiModel: selectedModels[0] || 'gemini-2.5-flash',
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.analysis) {
         setCompareResults({
-          summary: '여러 뉴스를 종합 분석한 결과입니다.',
-          commonPoints: ['공통점 1', '공통점 2'],
-          differences: ['차이점 1', '차이점 2'],
-          synthesis: 'AI가 생성한 종합 리포트 내용...',
+          summary: data.analysis.summary,
+          commonPoints: data.analysis.commonPoints,
+          differences: data.analysis.differences,
+          synthesis: data.analysis.synthesis,
         });
-        setIsComparing(false);
-      }, 2000);
+      } else {
+        console.error('Compare failed:', data.error);
+        alert('뉴스 비교 분석에 실패했습니다: ' + (data.error || '알 수 없는 오류'));
+      }
     } catch (error) {
       console.error('Compare error:', error);
+      alert('뉴스 비교 분석 중 오류가 발생했습니다.');
+    } finally {
       setIsComparing(false);
     }
   };
