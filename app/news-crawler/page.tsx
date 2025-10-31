@@ -62,18 +62,23 @@ export default function NewsCrawlerPage() {
   const [isComparing, setIsComparing] = useState(false);
 
   // AI Model Selection
-  const [selectedModels, setSelectedModels] = useState<string[]>(['gemini-2.5-flash']);
+  const [selectedModel, setSelectedModel] = useState<string>('gemini-2.5-flash');
   const [aiModels] = useState<AIModel[]>([
+    { value: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', provider: 'google' },
+    { value: 'gemini-2.5-exp', name: 'Gemini 2.5 Pro', provider: 'google' },
+    { value: 'gemini-flash', name: 'Gemini 1.5 Flash', provider: 'google' },
+    { value: 'gemini-pro', name: 'Gemini 1.5 Pro', provider: 'google' },
     { value: 'llama', name: 'DeepSeek Coder V2 16B', provider: 'ollama' },
     { value: 'qwen', name: 'Qwen3 Coder 30B', provider: 'ollama' },
     { value: 'gemma', name: 'Qwen3 Coder 480B', provider: 'ollama' },
     { value: 'mistral', name: 'GPT-OSS 120B', provider: 'ollama' },
-    { value: 'deepseek-v3', name: 'DeepSeek V3.1', provider: 'ollama' },
-    { value: 'gemini-flash', name: 'Gemini 1.5 Flash', provider: 'google' },
-    { value: 'gemini-pro', name: 'Gemini 1.5 Pro', provider: 'google' },
-    { value: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', provider: 'google' },
-    { value: 'gemini-2.5-exp', name: 'Gemini 2.5 Pro', provider: 'google' }
+    { value: 'deepseek-v3', name: 'DeepSeek V3.1', provider: 'ollama' }
   ]);
+
+  // Advanced Features
+  const [autoSummarize, setAutoSummarize] = useState<boolean>(true);
+  const [resultsPerPage, setResultsPerPage] = useState<number>(20);
+  const [sortBy, setSortBy] = useState<'date' | 'relevance'>('date');
 
   // Keywords Search Handler
   const handleKeywordSearch = async () => {
@@ -224,7 +229,7 @@ export default function NewsCrawlerPage() {
         },
         body: JSON.stringify({
           urls: validUrls,
-          aiModel: selectedModels[0] || 'gemini-2.5-flash',
+          aiModel: selectedModel || 'gemini-2.5-flash',
         }),
       });
 
@@ -273,6 +278,65 @@ export default function NewsCrawlerPage() {
         ]}
         subtitle="키워드 검색, RSS 피드, 트렌딩 뉴스, 비교 분석 등 다양한 방식으로 뉴스를 수집하세요"
       />
+
+      {/* AI Model Selector - Global */}
+      <div style={{
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        borderRadius: '12px',
+        padding: '20px 24px',
+        marginBottom: '24px',
+        boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        color: '#ffffff'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <i className="fas fa-robot" style={{ fontSize: '24px' }}></i>
+          <div>
+            <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '4px' }}>
+              AI 모델 선택
+            </div>
+            <div style={{ fontSize: '12px', opacity: 0.9 }}>
+              뉴스 분석 및 요약에 사용할 AI 모델을 선택하세요
+            </div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <select
+            value={selectedModel}
+            onChange={(e) => setSelectedModel(e.target.value)}
+            style={{
+              padding: '10px 16px',
+              borderRadius: '8px',
+              border: '2px solid rgba(255, 255, 255, 0.3)',
+              background: 'rgba(255, 255, 255, 0.15)',
+              color: '#ffffff',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              outline: 'none',
+              minWidth: '220px',
+              backdropFilter: 'blur(10px)'
+            }}
+          >
+            {aiModels.map((model) => (
+              <option key={model.value} value={model.value} style={{ color: '#111827', background: '#ffffff' }}>
+                {model.name}
+              </option>
+            ))}
+          </select>
+          <div style={{
+            padding: '8px 16px',
+            background: 'rgba(255, 255, 255, 0.2)',
+            borderRadius: '8px',
+            fontSize: '12px',
+            fontWeight: '600'
+          }}>
+            {aiModels.find(m => m.value === selectedModel)?.provider.toUpperCase()}
+          </div>
+        </div>
+      </div>
 
       {/* Tab Navigation */}
       <div style={{
@@ -393,34 +457,120 @@ export default function NewsCrawlerPage() {
                 </select>
               </div>
 
+              <div>
+                <label style={{
+                  display: 'block',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#374151',
+                  marginBottom: '8px'
+                }}>
+                  <i className="fas fa-cog" style={{ marginRight: '8px', color: '#8b5cf6' }}></i>
+                  추가 옵션
+                </label>
+                <div style={{
+                  display: 'flex',
+                  gap: '12px',
+                  flexDirection: 'column',
+                  padding: '12px',
+                  background: '#f9fafb',
+                  borderRadius: '8px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input
+                      type="checkbox"
+                      checked={autoSummarize}
+                      onChange={(e) => setAutoSummarize(e.target.checked)}
+                      style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                    />
+                    <span style={{ fontSize: '13px', color: '#6b7280' }}>자동 요약 생성</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <label style={{ fontSize: '13px', color: '#6b7280', minWidth: '80px' }}>결과 개수:</label>
+                    <select
+                      value={resultsPerPage}
+                      onChange={(e) => setResultsPerPage(Number(e.target.value))}
+                      style={{
+                        padding: '6px 12px',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '6px',
+                        fontSize: '13px',
+                        outline: 'none',
+                        flex: 1
+                      }}
+                    >
+                      <option value={10}>10개</option>
+                      <option value={20}>20개</option>
+                      <option value={50}>50개</option>
+                      <option value={100}>100개</option>
+                    </select>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <label style={{ fontSize: '13px', color: '#6b7280', minWidth: '80px' }}>정렬 기준:</label>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as 'date' | 'relevance')}
+                      style={{
+                        padding: '6px 12px',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '6px',
+                        fontSize: '13px',
+                        outline: 'none',
+                        flex: 1
+                      }}
+                    >
+                      <option value="date">최신순</option>
+                      <option value="relevance">관련도순</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
               <button
                 onClick={handleKeywordSearch}
                 disabled={isSearching || !keyword.trim()}
                 style={{
                   width: '100%',
-                  padding: '14px',
-                  background: isSearching ? '#9ca3af' : '#3b82f6',
+                  padding: '16px',
+                  background: isSearching
+                    ? 'linear-gradient(135deg, #9ca3af 0%, #6b7280 100%)'
+                    : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
                   color: '#ffffff',
                   border: 'none',
-                  borderRadius: '8px',
+                  borderRadius: '10px',
                   fontSize: '15px',
-                  fontWeight: '600',
+                  fontWeight: '700',
                   cursor: isSearching ? 'not-allowed' : 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '8px'
+                  gap: '10px',
+                  boxShadow: isSearching ? 'none' : '0 4px 12px rgba(59, 130, 246, 0.4)',
+                  transition: 'all 0.2s ease',
+                  transform: isSearching ? 'none' : 'translateY(0)',
+                }}
+                onMouseEnter={(e) => {
+                  if (!isSearching) {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(59, 130, 246, 0.5)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isSearching) {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.4)';
+                  }
                 }}
               >
                 {isSearching ? (
                   <>
-                    <i className="fas fa-spinner fa-spin"></i>
+                    <i className="fas fa-spinner fa-spin" style={{ fontSize: '16px' }}></i>
                     검색 중...
                   </>
                 ) : (
                   <>
-                    <i className="fas fa-search"></i>
-                    뉴스 검색
+                    <i className="fas fa-search" style={{ fontSize: '16px' }}></i>
+                    뉴스 검색 시작
                   </>
                 )}
               </button>
@@ -545,29 +695,45 @@ export default function NewsCrawlerPage() {
                 disabled={isFetchingRss}
                 style={{
                   width: '100%',
-                  padding: '14px',
-                  background: isFetchingRss ? '#9ca3af' : '#3b82f6',
+                  padding: '16px',
+                  background: isFetchingRss
+                    ? 'linear-gradient(135deg, #9ca3af 0%, #6b7280 100%)'
+                    : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                   color: '#ffffff',
                   border: 'none',
-                  borderRadius: '8px',
+                  borderRadius: '10px',
                   fontSize: '15px',
-                  fontWeight: '600',
+                  fontWeight: '700',
                   cursor: isFetchingRss ? 'not-allowed' : 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '8px'
+                  gap: '10px',
+                  boxShadow: isFetchingRss ? 'none' : '0 4px 12px rgba(16, 185, 129, 0.4)',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  if (!isFetchingRss) {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(16, 185, 129, 0.5)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isFetchingRss) {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.4)';
+                  }
                 }}
               >
                 {isFetchingRss ? (
                   <>
-                    <i className="fas fa-spinner fa-spin"></i>
+                    <i className="fas fa-spinner fa-spin" style={{ fontSize: '16px' }}></i>
                     불러오는 중...
                   </>
                 ) : (
                   <>
-                    <i className="fas fa-sync"></i>
-                    피드 불러오기
+                    <i className="fas fa-sync" style={{ fontSize: '16px' }}></i>
+                    RSS 피드 불러오기
                   </>
                 )}
               </button>
@@ -623,28 +789,44 @@ export default function NewsCrawlerPage() {
                 disabled={isFetchingTrending}
                 style={{
                   width: '100%',
-                  padding: '14px',
-                  background: isFetchingTrending ? '#9ca3af' : '#ef4444',
+                  padding: '16px',
+                  background: isFetchingTrending
+                    ? 'linear-gradient(135deg, #9ca3af 0%, #6b7280 100%)'
+                    : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
                   color: '#ffffff',
                   border: 'none',
-                  borderRadius: '8px',
+                  borderRadius: '10px',
                   fontSize: '15px',
-                  fontWeight: '600',
+                  fontWeight: '700',
                   cursor: isFetchingTrending ? 'not-allowed' : 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '8px'
+                  gap: '10px',
+                  boxShadow: isFetchingTrending ? 'none' : '0 4px 12px rgba(239, 68, 68, 0.4)',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  if (!isFetchingTrending) {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(239, 68, 68, 0.5)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isFetchingTrending) {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.4)';
+                  }
                 }}
               >
                 {isFetchingTrending ? (
                   <>
-                    <i className="fas fa-spinner fa-spin"></i>
+                    <i className="fas fa-spinner fa-spin" style={{ fontSize: '16px' }}></i>
                     불러오는 중...
                   </>
                 ) : (
                   <>
-                    <i className="fas fa-fire"></i>
+                    <i className="fas fa-fire" style={{ fontSize: '16px' }}></i>
                     트렌딩 뉴스 보기
                   </>
                 )}
@@ -700,33 +882,82 @@ export default function NewsCrawlerPage() {
                 같은 주제의 여러 뉴스를 비교 분석하여 객관적인 리포트를 생성합니다.
               </div>
 
+              <div>
+                <label style={{
+                  display: 'block',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#374151',
+                  marginBottom: '8px'
+                }}>
+                  <i className="fas fa-brain" style={{ marginRight: '8px', color: '#8b5cf6' }}></i>
+                  분석 옵션
+                </label>
+                <div style={{
+                  padding: '12px',
+                  background: '#f5f3ff',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  color: '#6b21a8'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                    <i className="fas fa-check-circle" style={{ color: '#8b5cf6' }}></i>
+                    <span>AI 통합 리포트 생성</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                    <i className="fas fa-check-circle" style={{ color: '#8b5cf6' }}></i>
+                    <span>공통점/차이점 분석</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <i className="fas fa-check-circle" style={{ color: '#8b5cf6' }}></i>
+                    <span>다중 관점 종합 요약</span>
+                  </div>
+                </div>
+              </div>
+
               <button
                 onClick={handleCompareNews}
                 disabled={isComparing}
                 style={{
                   width: '100%',
-                  padding: '14px',
-                  background: isComparing ? '#9ca3af' : '#8b5cf6',
+                  padding: '16px',
+                  background: isComparing
+                    ? 'linear-gradient(135deg, #9ca3af 0%, #6b7280 100%)'
+                    : 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
                   color: '#ffffff',
                   border: 'none',
-                  borderRadius: '8px',
+                  borderRadius: '10px',
                   fontSize: '15px',
-                  fontWeight: '600',
+                  fontWeight: '700',
                   cursor: isComparing ? 'not-allowed' : 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '8px'
+                  gap: '10px',
+                  boxShadow: isComparing ? 'none' : '0 4px 12px rgba(139, 92, 246, 0.4)',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  if (!isComparing) {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(139, 92, 246, 0.5)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isComparing) {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(139, 92, 246, 0.4)';
+                  }
                 }}
               >
                 {isComparing ? (
                   <>
-                    <i className="fas fa-spinner fa-spin"></i>
-                    분석 중...
+                    <i className="fas fa-spinner fa-spin" style={{ fontSize: '16px' }}></i>
+                    AI가 분석 중...
                   </>
                 ) : (
                   <>
-                    <i className="fas fa-balance-scale"></i>
+                    <i className="fas fa-balance-scale" style={{ fontSize: '16px' }}></i>
                     비교 분석 시작
                   </>
                 )}
@@ -789,16 +1020,26 @@ export default function NewsCrawlerPage() {
                     <button
                       onClick={() => handleRewriteNews(news)}
                       style={{
-                        padding: '8px 16px',
-                        background: '#3b82f6',
+                        padding: '10px 20px',
+                        background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
                         color: '#ffffff',
                         border: 'none',
-                        borderRadius: '6px',
+                        borderRadius: '8px',
                         fontSize: '13px',
-                        fontWeight: '600',
+                        fontWeight: '700',
                         cursor: 'pointer',
                         marginLeft: '12px',
-                        whiteSpace: 'nowrap'
+                        whiteSpace: 'nowrap',
+                        boxShadow: '0 2px 8px rgba(59, 130, 246, 0.3)',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.4)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(59, 130, 246, 0.3)';
                       }}
                     >
                       <i className="fas fa-edit"></i> 리라이팅
@@ -871,16 +1112,26 @@ export default function NewsCrawlerPage() {
                     <button
                       onClick={() => handleRewriteNews(news)}
                       style={{
-                        padding: '8px 16px',
-                        background: '#10b981',
+                        padding: '10px 20px',
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                         color: '#ffffff',
                         border: 'none',
-                        borderRadius: '6px',
+                        borderRadius: '8px',
                         fontSize: '13px',
-                        fontWeight: '600',
+                        fontWeight: '700',
                         cursor: 'pointer',
                         marginLeft: '12px',
-                        whiteSpace: 'nowrap'
+                        whiteSpace: 'nowrap',
+                        boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.4)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(16, 185, 129, 0.3)';
                       }}
                     >
                       <i className="fas fa-edit"></i> 리라이팅
@@ -961,16 +1212,26 @@ export default function NewsCrawlerPage() {
                     <button
                       onClick={() => handleRewriteNews(news)}
                       style={{
-                        padding: '8px 16px',
-                        background: '#ef4444',
+                        padding: '10px 20px',
+                        background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
                         color: '#ffffff',
                         border: 'none',
-                        borderRadius: '6px',
+                        borderRadius: '8px',
                         fontSize: '13px',
-                        fontWeight: '600',
+                        fontWeight: '700',
                         cursor: 'pointer',
                         marginLeft: '12px',
-                        whiteSpace: 'nowrap'
+                        whiteSpace: 'nowrap',
+                        boxShadow: '0 2px 8px rgba(239, 68, 68, 0.3)',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.4)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(239, 68, 68, 0.3)';
                       }}
                     >
                       <i className="fas fa-edit"></i> 리라이팅
@@ -1128,22 +1389,32 @@ export default function NewsCrawlerPage() {
                     }}
                     style={{
                       width: '100%',
-                      padding: '14px',
-                      background: '#8b5cf6',
+                      padding: '16px',
+                      background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
                       color: '#ffffff',
                       border: 'none',
-                      borderRadius: '8px',
+                      borderRadius: '10px',
                       fontSize: '15px',
-                      fontWeight: '600',
+                      fontWeight: '700',
                       cursor: 'pointer',
                       marginTop: '20px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      gap: '8px'
+                      gap: '10px',
+                      boxShadow: '0 4px 12px rgba(139, 92, 246, 0.4)',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 6px 16px rgba(139, 92, 246, 0.5)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(139, 92, 246, 0.4)';
                     }}
                   >
-                    <i className="fas fa-edit"></i>
+                    <i className="fas fa-edit" style={{ fontSize: '16px' }}></i>
                     에디터에서 편집하기
                   </button>
                 </div>
