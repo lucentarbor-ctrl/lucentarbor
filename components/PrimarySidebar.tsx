@@ -32,6 +32,7 @@ const menuItems: MenuItem[] = [
       { href: '/editor', icon: 'far fa-edit', label: '글쓰기' },
       { href: '/news-crawler', icon: 'fas fa-newspaper', label: '뉴스크롤링' },
       { href: '/course-creator', icon: 'fas fa-graduation-cap', label: '강좌제작' },
+      { href: '/categories', icon: 'fas fa-folder-tree', label: '카테고리 관리' },
     ]
   },
   { id: 'posts', icon: 'far fa-file-alt', label: '내 글' },

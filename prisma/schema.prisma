@@ -13,9 +13,10 @@ datasource db {
 model Post {
   id            Int       @id @default(autoincrement())
   seriesId      Int?
+  categoryId    Int?
   title         String
   content       String
-  category      String?
+  category      String?   // Legacy category field
   tags          String?   // JSON array
   status        String    @default("draft") // draft, published, scheduled, archived
   views         Int       @default(0)
@@ -28,6 +29,7 @@ model Post {
   publishedTime DateTime?
 
   series            Series?            @relation(fields: [seriesId], references: [id], onDelete: SetNull)
+  postCategory      Category?          @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   versions          PostVersion[]
   histories         PublishHistory[]
   scheduledPosts    ScheduledPost[]
@@ -267,16 +269,18 @@ model Blog {
 
 model Category {
   id          Int      @id @default(autoincrement())
-  blogId      Int
+  blogId      Int?
   name        String
   parentId    Int?     // for hierarchical categories
   description String?
   order       Int      @default(0)
   isActive    Boolean  @default(true)
+  postCount   Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  blog           Blog            @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  blog           Blog?           @relation(fields: [blogId], references: [id], onDelete: SetNull)
+  posts          Post[]
   scheduledPosts ScheduledPost[]
 
   @@map("categories")
