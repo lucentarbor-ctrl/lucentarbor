@@ -47,6 +47,7 @@ export default function CourseCreatorPage() {
   const [activeTab, setActiveTab] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const [viewMode, setViewMode] = useState<'edit' | 'preview'>('preview');
 
   const handleModelSelection = (modelValue: string) => {
     setSelectedModels(prev =>
@@ -738,40 +739,106 @@ ${courseDescription ? `강좌 설명: ${courseDescription}` : ''}
                     </div>
 
                     <div style={{ marginBottom: '20px' }}>
-                      <label style={{
-                        display: 'block',
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        color: '#374151',
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
                         marginBottom: '8px'
                       }}>
-                        내용
-                      </label>
-                      <textarea
-                        value={results[activeTab].content}
-                        onChange={(e) => {
-                          setResults(prev => ({
-                            ...prev,
-                            [activeTab]: {
-                              ...prev[activeTab],
-                              content: e.target.value
-                            }
-                          }));
-                        }}
-                        disabled={results[activeTab].loading}
-                        style={{
-                          width: '100%',
-                          minHeight: '500px',
-                          padding: '16px',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
+                        <label style={{
+                          display: 'block',
                           fontSize: '14px',
-                          lineHeight: '1.6',
-                          fontFamily: 'inherit',
-                          outline: 'none',
-                          resize: 'vertical'
-                        }}
-                      />
+                          fontWeight: '600',
+                          color: '#374151'
+                        }}>
+                          내용
+                        </label>
+                        <div style={{
+                          display: 'flex',
+                          gap: '8px',
+                          background: '#f3f4f6',
+                          padding: '4px',
+                          borderRadius: '6px'
+                        }}>
+                          <button
+                            onClick={() => setViewMode('edit')}
+                            style={{
+                              padding: '6px 12px',
+                              background: viewMode === 'edit' ? '#ffffff' : 'transparent',
+                              color: viewMode === 'edit' ? '#111827' : '#6b7280',
+                              border: 'none',
+                              borderRadius: '4px',
+                              fontSize: '13px',
+                              fontWeight: '600',
+                              cursor: 'pointer',
+                              boxShadow: viewMode === 'edit' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                            }}
+                          >
+                            <i className="fas fa-code" style={{ marginRight: '4px' }}></i>
+                            편집
+                          </button>
+                          <button
+                            onClick={() => setViewMode('preview')}
+                            style={{
+                              padding: '6px 12px',
+                              background: viewMode === 'preview' ? '#ffffff' : 'transparent',
+                              color: viewMode === 'preview' ? '#111827' : '#6b7280',
+                              border: 'none',
+                              borderRadius: '4px',
+                              fontSize: '13px',
+                              fontWeight: '600',
+                              cursor: 'pointer',
+                              boxShadow: viewMode === 'preview' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                            }}
+                          >
+                            <i className="fas fa-eye" style={{ marginRight: '4px' }}></i>
+                            미리보기
+                          </button>
+                        </div>
+                      </div>
+
+                      {viewMode === 'edit' ? (
+                        <textarea
+                          value={results[activeTab].content}
+                          onChange={(e) => {
+                            setResults(prev => ({
+                              ...prev,
+                              [activeTab]: {
+                                ...prev[activeTab],
+                                content: e.target.value
+                              }
+                            }));
+                          }}
+                          disabled={results[activeTab].loading}
+                          style={{
+                            width: '100%',
+                            minHeight: '500px',
+                            padding: '16px',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '8px',
+                            fontSize: '14px',
+                            lineHeight: '1.6',
+                            fontFamily: 'monospace',
+                            outline: 'none',
+                            resize: 'vertical'
+                          }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            width: '100%',
+                            minHeight: '500px',
+                            padding: '16px',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '8px',
+                            fontSize: '14px',
+                            lineHeight: '1.6',
+                            background: '#ffffff',
+                            overflow: 'auto'
+                          }}
+                          dangerouslySetInnerHTML={{ __html: results[activeTab].content }}
+                        />
+                      )}
                     </div>
 
                     <div style={{
