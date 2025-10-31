@@ -38,6 +38,7 @@ const EditorPage: React.FC = () => {
   const [showFloatingModal, setShowFloatingModal] = useState<boolean>(false);
   const [floatingResults, setFloatingResults] = useState<ModelResults>({});
   const [activeFloatingTab, setActiveFloatingTab] = useState<string>('');
+  const [improvingAction, setImprovingAction] = useState<string | null>(null);
 
   const editorRef = useRef<HTMLDivElement>(null);
 
@@ -238,6 +239,45 @@ const EditorPage: React.FC = () => {
         <body>${editorContent}</body>
         </html>
       `);
+    }
+  };
+
+  const handleImprove = async (action: string) => {
+    if (!editorContent || editorContent.trim() === '') {
+      alert('개선할 내용을 먼저 작성해주세요.');
+      return;
+    }
+
+    setImprovingAction(action);
+
+    try {
+      const response = await fetch('/api/editor/improve', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          content: editorContent,
+          action: action,
+          aiModel: selectedModels[0] || 'gemini-2.5-flash',
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.improvedContent) {
+        setEditorContent(data.improvedContent);
+        if (editorRef.current) {
+          editorRef.current.innerHTML = data.improvedContent;
+        }
+      } else {
+        alert('개선에 실패했습니다: ' + (data.error || '알 수 없는 오류'));
+      }
+    } catch (error) {
+      console.error('Improve error:', error);
+      alert('개선 중 오류가 발생했습니다.');
+    } finally {
+      setImprovingAction(null);
     }
   };
 
@@ -506,6 +546,54 @@ const EditorPage: React.FC = () => {
           gap: 8px;
         }
 
+        .ai-toolbar {
+          width: 100%;
+          display: flex;
+          gap: 16px;
+          padding: 12px 0;
+          border-top: 1px solid #e5e7eb;
+          flex-wrap: wrap;
+        }
+
+        .ai-toolbar-section {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .toolbar-label {
+          font-size: 12px;
+          color: #6b7280;
+          font-weight: 600;
+          padding: 0 8px;
+        }
+
+        .btn-ai-tool {
+          padding: 6px 12px;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: #ffffff;
+          border: none;
+          border-radius: 6px;
+          font-size: 12px;
+          font-weight: 500;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          transition: all 0.2s ease;
+          white-space: nowrap;
+        }
+
+        .btn-ai-tool:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-ai-tool:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
         .btn-secondary {
           padding: 8px 16px;
           background: #ffffff;
@@ -754,6 +842,102 @@ const EditorPage: React.FC = () => {
             <div className="word-count">
               글자 수: {charCount} | 단어 수: {wordCount}
             </div>
+
+            {/* AI 편집 도구 */}
+            <div className="ai-toolbar">
+              <div className="ai-toolbar-section">
+                <span className="toolbar-label">필수 기능</span>
+                <button
+                  onClick={() => handleImprove('grammar')}
+                  disabled={improvingAction === 'grammar'}
+                  className="btn-ai-tool"
+                  title="문법, 맞춤법, 띄어쓰기 오류 수정"
+                >
+                  {improvingAction === 'grammar' ? '⏳' : '✓'} 문법검사
+                </button>
+                <button
+                  onClick={() => handleImprove('context')}
+                  disabled={improvingAction === 'context'}
+                  className="btn-ai-tool"
+                  title="어색한 표현을 자연스럽게 개선"
+                >
+                  {improvingAction === 'context' ? '⏳' : '📝'} 문맥수정
+                </button>
+                <button
+                  onClick={() => handleImprove('tone_formal')}
+                  disabled={improvingAction === 'tone_formal'}
+                  className="btn-ai-tool"
+                  title="격식체로 변환"
+                >
+                  {improvingAction === 'tone_formal' ? '⏳' : '👔'} 격식체
+                </button>
+                <button
+                  onClick={() => handleImprove('tone_casual')}
+                  disabled={improvingAction === 'tone_casual'}
+                  className="btn-ai-tool"
+                  title="친근한 구어체로 변환"
+                >
+                  {improvingAction === 'tone_casual' ? '⏳' : '💬'} 구어체
+                </button>
+              </div>
+
+              <div className="ai-toolbar-section">
+                <span className="toolbar-label">가독성</span>
+                <button
+                  onClick={() => handleImprove('readability')}
+                  disabled={improvingAction === 'readability'}
+                  className="btn-ai-tool"
+                  title="복잡한 문장을 쉽게 개선"
+                >
+                  {improvingAction === 'readability' ? '⏳' : '📊'} 가독성개선
+                </button>
+                <button
+                  onClick={() => handleImprove('expand')}
+                  disabled={improvingAction === 'expand'}
+                  className="btn-ai-tool"
+                  title="내용을 풍부하게 확장"
+                >
+                  {improvingAction === 'expand' ? '⏳' : '📈'} 확장
+                </button>
+                <button
+                  onClick={() => handleImprove('shorten')}
+                  disabled={improvingAction === 'shorten'}
+                  className="btn-ai-tool"
+                  title="간결하게 축약"
+                >
+                  {improvingAction === 'shorten' ? '⏳' : '📉'} 축약
+                </button>
+              </div>
+
+              <div className="ai-toolbar-section">
+                <span className="toolbar-label">최적화</span>
+                <button
+                  onClick={() => handleImprove('summarize')}
+                  disabled={improvingAction === 'summarize'}
+                  className="btn-ai-tool"
+                  title="핵심 내용 요약"
+                >
+                  {improvingAction === 'summarize' ? '⏳' : '📄'} 요약
+                </button>
+                <button
+                  onClick={() => handleImprove('title')}
+                  disabled={improvingAction === 'title'}
+                  className="btn-ai-tool"
+                  title="매력적인 제목 제안"
+                >
+                  {improvingAction === 'title' ? '⏳' : '💡'} 제목제안
+                </button>
+                <button
+                  onClick={() => handleImprove('seo')}
+                  disabled={improvingAction === 'seo'}
+                  className="btn-ai-tool"
+                  title="SEO 최적화"
+                >
+                  {improvingAction === 'seo' ? '⏳' : '🔍'} SEO
+                </button>
+              </div>
+            </div>
+
             <div className="footer-actions">
               <button onClick={saveContent} className="btn-secondary">
                 <FaSave />
