@@ -126,24 +126,47 @@ export default function CourseCreatorPage() {
       return option ? option.label : section;
     }).join(', ');
 
-    const prompt = `다음 조건으로 온라인 강좌를 제작해주세요:
+    const prompt = `당신은 전문 강사이자 교육 전문가입니다. "${courseTitle}"라는 주제로 온라인 강좌 콘텐츠를 작성해야 합니다.
 
-강좌 제목: ${courseTitle}
-${courseDescription ? `강좌 설명: ${courseDescription}` : ''}
-난이도: ${difficultyLabels[difficulty as keyof typeof difficultyLabels]}
-강좌 길이: ${durationLabels[duration as keyof typeof durationLabels]}
-대상 청중: ${audienceLabels[audience as keyof typeof audienceLabels]}
-포함할 섹션: ${sectionDescriptions}
+【강좌 정보】
+- 주제: ${courseTitle}
+${courseDescription ? `- 설명: ${courseDescription}` : ''}
+- 난이도: ${difficultyLabels[difficulty as keyof typeof difficultyLabels]}
+- 강좌 길이: ${durationLabels[duration as keyof typeof durationLabels]}
+- 대상 청중: ${audienceLabels[audience as keyof typeof audienceLabels]}
+- 포함할 섹션: ${sectionDescriptions}
 
-다음 형식으로 작성해주세요:
+【작성 지침】
+1. "${courseTitle}" 주제에 대한 체계적이고 상세한 강좌 콘텐츠를 작성하세요
+2. 선택된 모든 섹션(${sectionDescriptions})을 포함하세요
+3. 각 섹션은 제목과 함께 상세한 설명을 포함해야 합니다
+4. 학습자가 이해하기 쉽고 실용적인 내용으로 작성하세요
+5. 구체적인 예시와 설명을 포함하세요
 
-## 제목
-[매력적인 강좌 제목]
+【출력 형식】
+마크다운 형식으로 작성하되, 다음 구조를 따르세요:
 
-## 본문
-[선택된 섹션들에 대한 상세한 내용을 체계적으로 작성]
+# ${courseTitle}
 
-전문 강사이자 교육 전문가의 관점에서 학습자가 이해하기 쉽고 실용적인 강좌를 작성해주세요.`;
+## 강좌 개요
+[강좌에 대한 전반적인 소개]
+
+## [선택된 섹션 1]
+[상세 내용]
+
+## [선택된 섹션 2]
+[상세 내용]
+
+(선택된 모든 섹션을 포함)
+
+이제 "${courseTitle}" 주제로 상세한 강좌 콘텐츠를 작성하세요.`;
+
+    // 디버깅: 프롬프트 확인
+    console.log('=== 강좌 생성 프롬프트 ===');
+    console.log('제목:', courseTitle);
+    console.log('설명:', courseDescription);
+    console.log('전체 프롬프트:', prompt);
+    console.log('=======================');
 
     const newResults: ModelResults = {};
 

@@ -77,6 +77,10 @@ export default function NewsCrawlerPage() {
 
   // Advanced Features
   const [autoSummarize, setAutoSummarize] = useState<boolean>(true);
+
+  // Rewriting States
+  const [isRewriting, setIsRewriting] = useState(false);
+  const [rewritingNewsId, setRewritingNewsId] = useState<string | null>(null);
   const [resultsPerPage, setResultsPerPage] = useState<number>(20);
   const [sortBy, setSortBy] = useState<'date' | 'relevance'>('date');
 
@@ -255,9 +259,39 @@ export default function NewsCrawlerPage() {
   };
 
   const handleRewriteNews = async (newsItem: NewsItem) => {
-    // 선택한 뉴스를 AI로 리라이팅
-    const editorUrl = `/editor?url=${encodeURIComponent(newsItem.url)}&title=${encodeURIComponent(newsItem.title)}`;
-    window.location.href = editorUrl;
+    // AI로 기사를 리라이팅
+    setIsRewriting(true);
+    setRewritingNewsId(newsItem.id);
+
+    try {
+      const response = await fetch('/api/news/rewrite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: newsItem.url,
+          title: newsItem.title,
+          summary: newsItem.summary,
+          model: selectedModel
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // 리라이팅된 결과를 에디터로 전달
+        const editorUrl = `/editor?title=${encodeURIComponent(data.title)}&content=${encodeURIComponent(data.content)}`;
+        window.location.href = editorUrl;
+      } else {
+        alert('리라이팅에 실패했습니다: ' + (data.error || '알 수 없는 오류'));
+        setIsRewriting(false);
+        setRewritingNewsId(null);
+      }
+    } catch (error) {
+      console.error('Rewrite error:', error);
+      alert('리라이팅 중 오류가 발생했습니다.');
+      setIsRewriting(false);
+      setRewritingNewsId(null);
+    }
   };
 
   const tabs = [
@@ -1019,30 +1053,44 @@ export default function NewsCrawlerPage() {
                     </h3>
                     <button
                       onClick={() => handleRewriteNews(news)}
+                      disabled={isRewriting && rewritingNewsId === news.id}
                       style={{
                         padding: '10px 20px',
-                        background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                        background: isRewriting && rewritingNewsId === news.id
+                          ? '#9ca3af'
+                          : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
                         color: '#ffffff',
                         border: 'none',
                         borderRadius: '8px',
                         fontSize: '13px',
                         fontWeight: '700',
-                        cursor: 'pointer',
+                        cursor: isRewriting && rewritingNewsId === news.id ? 'not-allowed' : 'pointer',
                         marginLeft: '12px',
                         whiteSpace: 'nowrap',
                         boxShadow: '0 2px 8px rgba(59, 130, 246, 0.3)',
-                        transition: 'all 0.2s ease'
+                        transition: 'all 0.2s ease',
+                        opacity: isRewriting && rewritingNewsId === news.id ? 0.7 : 1
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'translateY(-2px)';
-                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.4)';
+                        if (!(isRewriting && rewritingNewsId === news.id)) {
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                          e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.4)';
+                        }
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.transform = 'translateY(0)';
                         e.currentTarget.style.boxShadow = '0 2px 8px rgba(59, 130, 246, 0.3)';
                       }}
                     >
-                      <i className="fas fa-edit"></i> 리라이팅
+                      {isRewriting && rewritingNewsId === news.id ? (
+                        <>
+                          <i className="fas fa-spinner fa-spin"></i> AI 리라이팅 중...
+                        </>
+                      ) : (
+                        <>
+                          <i className="fas fa-edit"></i> 리라이팅
+                        </>
+                      )}
                     </button>
                   </div>
                   <div style={{
@@ -1111,30 +1159,44 @@ export default function NewsCrawlerPage() {
                     </h3>
                     <button
                       onClick={() => handleRewriteNews(news)}
+                      disabled={isRewriting && rewritingNewsId === news.id}
                       style={{
                         padding: '10px 20px',
-                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                        background: isRewriting && rewritingNewsId === news.id
+                          ? '#9ca3af'
+                          : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                         color: '#ffffff',
                         border: 'none',
                         borderRadius: '8px',
                         fontSize: '13px',
                         fontWeight: '700',
-                        cursor: 'pointer',
+                        cursor: isRewriting && rewritingNewsId === news.id ? 'not-allowed' : 'pointer',
                         marginLeft: '12px',
                         whiteSpace: 'nowrap',
                         boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
-                        transition: 'all 0.2s ease'
+                        transition: 'all 0.2s ease',
+                        opacity: isRewriting && rewritingNewsId === news.id ? 0.7 : 1
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'translateY(-2px)';
-                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.4)';
+                        if (!(isRewriting && rewritingNewsId === news.id)) {
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                          e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.4)';
+                        }
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.transform = 'translateY(0)';
                         e.currentTarget.style.boxShadow = '0 2px 8px rgba(16, 185, 129, 0.3)';
                       }}
                     >
-                      <i className="fas fa-edit"></i> 리라이팅
+                      {isRewriting && rewritingNewsId === news.id ? (
+                        <>
+                          <i className="fas fa-spinner fa-spin"></i> AI 리라이팅 중...
+                        </>
+                      ) : (
+                        <>
+                          <i className="fas fa-edit"></i> 리라이팅
+                        </>
+                      )}
                     </button>
                   </div>
                   <div style={{
@@ -1211,30 +1273,44 @@ export default function NewsCrawlerPage() {
                     </div>
                     <button
                       onClick={() => handleRewriteNews(news)}
+                      disabled={isRewriting && rewritingNewsId === news.id}
                       style={{
                         padding: '10px 20px',
-                        background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                        background: isRewriting && rewritingNewsId === news.id
+                          ? '#9ca3af'
+                          : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
                         color: '#ffffff',
                         border: 'none',
                         borderRadius: '8px',
                         fontSize: '13px',
                         fontWeight: '700',
-                        cursor: 'pointer',
+                        cursor: isRewriting && rewritingNewsId === news.id ? 'not-allowed' : 'pointer',
                         marginLeft: '12px',
                         whiteSpace: 'nowrap',
                         boxShadow: '0 2px 8px rgba(239, 68, 68, 0.3)',
-                        transition: 'all 0.2s ease'
+                        transition: 'all 0.2s ease',
+                        opacity: isRewriting && rewritingNewsId === news.id ? 0.7 : 1
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'translateY(-2px)';
-                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.4)';
+                        if (!(isRewriting && rewritingNewsId === news.id)) {
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                          e.currentTarget.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.4)';
+                        }
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.transform = 'translateY(0)';
                         e.currentTarget.style.boxShadow = '0 2px 8px rgba(239, 68, 68, 0.3)';
                       }}
                     >
-                      <i className="fas fa-edit"></i> 리라이팅
+                      {isRewriting && rewritingNewsId === news.id ? (
+                        <>
+                          <i className="fas fa-spinner fa-spin"></i> AI 리라이팅 중...
+                        </>
+                      ) : (
+                        <>
+                          <i className="fas fa-edit"></i> 리라이팅
+                        </>
+                      )}
                     </button>
                   </div>
                   <div style={{

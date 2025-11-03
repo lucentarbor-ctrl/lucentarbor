@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import AppLayout from '@/components/AppLayout';
 import PageHeader from '@/components/PageHeader';
 import { FaMagic, FaRobot, FaBold, FaItalic, FaUnderline, FaListOl, FaListUl, FaLink, FaUndo, FaRedo, FaSave, FaImage, FaEye } from 'react-icons/fa';
@@ -28,6 +28,7 @@ interface ModelResults {
 
 const EditorPage: React.FC = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [editorContent, setEditorContent] = useState<string>('<h2>제목을 입력하세요</h2><p>여기에 내용을 작성하세요. AI가 실시간으로 도와드립니다.</p>');
   const [selectedModels, setSelectedModels] = useState<string[]>(['gemini-2.5-flash', 'gemini-pro']);
   const [aiModels, setAiModels] = useState<AIModel[]>([]);
@@ -50,6 +51,45 @@ const EditorPage: React.FC = () => {
   useEffect(() => {
     updateWordCount();
   }, [editorContent]);
+
+  // Handle URL parameters from news crawler and course creator
+  useEffect(() => {
+    const url = searchParams.get('url');
+    const title = searchParams.get('title');
+    const content = searchParams.get('content');
+
+    if (url || title || content) {
+      let newContent = '';
+
+      // If title is provided, add it as H2 (unless it already contains HTML tags)
+      if (title) {
+        // Check if title already contains HTML tags
+        if (title.includes('<')) {
+          newContent += title;
+        } else {
+          newContent += `<h2>${title}</h2>`;
+        }
+      }
+
+      // If content is provided, add it directly (it may already contain HTML)
+      if (content) {
+        // Content from course creator is already HTML formatted
+        // Content from news crawler might be plain text
+        // Just add it directly - the editor will handle it
+        newContent += content;
+      } else if (url) {
+        // If only URL is provided, add placeholder text
+        newContent += `<p>뉴스 URL: ${url}</p><p>여기에 리라이팅된 내용이 표시됩니다. AI 생성 기능을 사용하여 콘텐츠를 작성하세요.</p>`;
+      }
+
+      if (newContent) {
+        setEditorContent(newContent);
+        if (editorRef.current) {
+          editorRef.current.innerHTML = newContent;
+        }
+      }
+    }
+  }, [searchParams]);
 
   // ==================== FUNCTIONS ====================
   const loadAIModels = async () => {
